@@ -92,18 +92,24 @@ const upsertOwnedDoc = async (
   const snapshot = await getDoc(reference);
 
   if (snapshot.exists()) {
-    await updateDoc(reference, {
-      ...stripUndefined(payload),
-      ...stampForUpdate(),
-    });
+    await updateDoc(
+      reference,
+      stripUndefined({
+        ...payload,
+        ...stampForUpdate(),
+      }),
+    );
     return;
   }
 
-  await setDoc(reference, {
-    ownerUid: uid,
-    ...stripUndefined(payload),
-    ...stampForCreate(),
-  });
+  await setDoc(
+    reference,
+    stripUndefined({
+      ownerUid: uid,
+      ...payload,
+      ...stampForCreate(),
+    }),
+  );
 };
 
 const exercisesCol = (uid: string) => collection(db, 'users', uid, 'exercises');
