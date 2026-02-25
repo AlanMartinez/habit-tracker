@@ -14,7 +14,7 @@ type BottomNavProps = {
 }
 
 export const BottomNav = ({ items = defaultItems }: BottomNavProps) => (
-  <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white px-2 pb-2 pt-2 md:left-1/2 md:max-w-3xl md:-translate-x-1/2 md:rounded-t-2xl md:border md:shadow-lg">
+  <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-violet-200 dark:border-violet-800 bg-violet-50/80 dark:bg-violet-900/50 px-2 pb-2 pt-2 md:left-1/2 md:max-w-3xl md:-translate-x-1/2 md:rounded-t-2xl md:border md:shadow-lg">
     <ul className="grid grid-cols-4 gap-1">
       {items.map((item) => (
         <li key={item.key}>
@@ -22,7 +22,7 @@ export const BottomNav = ({ items = defaultItems }: BottomNavProps) => (
             className={({ isActive }) =>
               cn(
                 'flex min-h-11 items-center justify-center rounded-lg px-2 text-sm font-medium transition',
-                isActive ? 'bg-teal-100 text-teal-700' : 'text-slate-600 hover:bg-slate-100',
+                isActive ? 'bg-violet-200 dark:bg-violet-800 text-violet-800 dark:text-violet-200' : 'text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/70',
               )
             }
             to={item.to}

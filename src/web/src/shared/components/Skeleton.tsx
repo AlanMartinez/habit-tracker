@@ -16,6 +16,6 @@ const variantClasses: Record<SkeletonVariant, string> = {
 export const Skeleton = ({ variant = 'row', className }: SkeletonProps) => (
   <div
     aria-hidden="true"
-    className={cn('animate-pulse bg-slate-200', variantClasses[variant], className)}
+    className={cn('animate-pulse bg-violet-200 dark:bg-violet-800', variantClasses[variant], className)}
   />
 )

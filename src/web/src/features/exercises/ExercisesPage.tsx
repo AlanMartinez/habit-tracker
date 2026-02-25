@@ -121,10 +121,10 @@ export const ExercisesPage = () => {
       {!isLoading && filtered.length > 0 && (
         <Card className="space-y-3">
           {filtered.map((item) => (
-            <article className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0" key={item.id}>
+            <article className="flex items-start justify-between gap-3 border-b border-violet-100 dark:border-violet-900/60 pb-3 last:border-b-0 last:pb-0" key={item.id}>
               <div>
-                <h2 className="text-base font-semibold text-slate-900">{item.name}</h2>
-                <p className="text-xs text-slate-500">{item.muscle} • {item.equipment}</p>
+                <h2 className="text-base font-semibold text-violet-950 dark:text-violet-100">{item.name}</h2>
+                <p className="text-xs text-violet-500 dark:text-violet-400">{item.muscle}  {item.equipment}</p>
               </div>
               <div className="flex gap-2">
                 <Button onClick={() => openEdit(item)} size="sm" variant="ghost">

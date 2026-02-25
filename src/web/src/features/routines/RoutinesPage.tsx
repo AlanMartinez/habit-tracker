@@ -72,9 +72,9 @@ export const RoutinesPage = () => {
       {!isLoading && items.length > 0 && (
         <Card className="space-y-3">
           {items.map((item) => (
-            <article className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0" key={item.id}>
+            <article className="flex items-center justify-between gap-3 border-b border-violet-100 dark:border-violet-900/60 pb-3 last:border-b-0 last:pb-0" key={item.id}>
               <div className="space-y-1">
-                <h2 className="text-base font-semibold text-slate-900">{item.name}</h2>
+                <h2 className="text-base font-semibold text-violet-950 dark:text-violet-100">{item.name}</h2>
                 <div className="flex items-center gap-2">
                   <Badge tone="info">{item.type}</Badge>
                   {item.active && <Badge tone="active">Active</Badge>}
@@ -87,7 +87,7 @@ export const RoutinesPage = () => {
                   </Button>
                 )}
                 <Link
-                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-violet-200 dark:border-violet-800 px-3 text-sm font-semibold text-violet-800 dark:text-violet-200 transition hover:bg-violet-100 dark:hover:bg-violet-900/70"
                   to={`/app/routines/${item.id}`}
                 >
                   Open

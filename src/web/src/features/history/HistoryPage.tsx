@@ -33,13 +33,13 @@ export const HistoryPage = () => {
             <Button size="sm" variant="ghost">
               Prev
             </Button>
-            <h2 className="text-lg font-semibold text-slate-900">Feb 2026</h2>
+            <h2 className="text-lg font-semibold text-violet-950 dark:text-violet-100">Feb 2026</h2>
             <Button size="sm" variant="ghost">
               Next
             </Button>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-500">
+          <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-violet-500 dark:text-violet-400">
             {weekdayLabels.map((label) => (
               <span key={label}>{label}</span>
             ))}
@@ -48,7 +48,7 @@ export const HistoryPage = () => {
           <div className="grid grid-cols-7 gap-1">
             {monthCells.map((cell, index) => (
               <button
-                className="min-h-11 rounded-lg border border-slate-200 p-1 text-sm text-slate-700 disabled:border-transparent disabled:bg-transparent"
+                className="min-h-11 rounded-lg border border-violet-200 dark:border-violet-800 p-1 text-sm text-violet-800 dark:text-violet-200 disabled:border-transparent disabled:bg-transparent"
                 disabled={cell.label.length === 0}
                 key={`${cell.label}-${index}`}
                 onClick={() => {
@@ -59,7 +59,7 @@ export const HistoryPage = () => {
                 type="button"
               >
                 <span className="block">{cell.label}</span>
-                {cell.hasWorkout && <span className="mx-auto mt-1 block h-1.5 w-1.5 rounded-full bg-teal-600" />}
+                {cell.hasWorkout && <span className="mx-auto mt-1 block h-1.5 w-1.5 rounded-full bg-violet-600" />}
               </button>
             ))}
           </div>
@@ -75,14 +75,14 @@ export const HistoryPage = () => {
 
       <Drawer onClose={() => setSelectedDay(null)} open={Boolean(selectedDay)} title={selectedLabel || 'Workout Detail'}>
         <div className="space-y-3">
-          <p className="text-sm text-slate-700">Pull - PPL V1</p>
-          <div className="rounded-lg border border-slate-200 p-3">
-            <p className="text-sm font-semibold text-slate-900">Lat Pulldown</p>
-            <p className="text-xs text-slate-600">10x55, 8x60</p>
+          <p className="text-sm text-violet-800 dark:text-violet-200">Pull - PPL V1</p>
+          <div className="rounded-lg border border-violet-200 dark:border-violet-800 p-3">
+            <p className="text-sm font-semibold text-violet-950 dark:text-violet-100">Lat Pulldown</p>
+            <p className="text-xs text-violet-700 dark:text-violet-300">10x55, 8x60</p>
           </div>
-          <div className="rounded-lg border border-slate-200 p-3">
-            <p className="text-sm font-semibold text-slate-900">Seated Row</p>
-            <p className="text-xs text-slate-600">12x45, 10x50</p>
+          <div className="rounded-lg border border-violet-200 dark:border-violet-800 p-3">
+            <p className="text-sm font-semibold text-violet-950 dark:text-violet-100">Seated Row</p>
+            <p className="text-xs text-violet-700 dark:text-violet-300">12x45, 10x50</p>
           </div>
         </div>
       </Drawer>
