@@ -37,9 +37,9 @@ const toId = (): string =>
 
 const createSet = (): WorkoutSet => ({
   id: toId(),
-  reps: '1',
+  reps: '',
   kg: '',
-  rir: '1',
+  rir: '',
 })
 
 const reorderItems = <T,>(items: T[], fromIndex: number, toIndex: number): T[] => {
@@ -53,7 +53,19 @@ const reorderItems = <T,>(items: T[], fromIndex: number, toIndex: number): T[] =
   return next
 }
 
-const toNumberText = (value: string): string => value.replace(/[^0-9]/g, '')
+const toIntegerText = (value: string): string => value.replace(/[^0-9]/g, '')
+
+const toDecimalText = (value: string): string => {
+  const normalized = value.replace(',', '.')
+  const digitsAndDots = normalized.replace(/[^0-9.]/g, '')
+  const [integerPart, ...decimals] = digitsAndDots.split('.')
+
+  if (decimals.length === 0) {
+    return integerPart
+  }
+
+  return `${integerPart}.${decimals.join('')}`
+}
 
 const mapDraftToExercise = (item: WorkoutDraft['exercises'][number]): WorkoutExercise => ({
   id: item.id,
@@ -63,9 +75,9 @@ const mapDraftToExercise = (item: WorkoutDraft['exercises'][number]): WorkoutExe
   sets: item.sets.length > 0
     ? item.sets.map((set) => ({
         id: set.id,
-        reps: String(set.reps),
-        kg: String(set.weightKg),
-        rir: String(set.rpe ?? 1),
+        reps: set.reps > 1 ? String(set.reps) : '',
+        kg: set.weightKg > 0 ? String(set.weightKg) : '',
+        rir: (set.rpe ?? 1) > 1 ? String(set.rpe ?? 1) : '',
       }))
     : [createSet()],
 })
@@ -183,6 +195,7 @@ export const LogWorkoutPage = () => {
   }
 
   const addSet = (exerciseId: string) => {
+    setHasOverrides(true)
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== exerciseId) {
@@ -211,17 +224,91 @@ export const LogWorkoutPage = () => {
     key: 'reps' | 'kg' | 'rir',
     value: string,
   ) => {
+    const normalizedValue = key === 'kg' ? toDecimalText(value) : toIntegerText(value)
+
+    setHasOverrides(true)
     setItems((prev) =>
-      prev.map((item) =>
-        item.id === exerciseId
-          ? {
-              ...item,
-              sets: item.sets.map((set) =>
-                set.id === setId ? { ...set, [key]: toNumberText(value) } : set,
-              ),
+      prev.map((item) => {
+        if (item.id !== exerciseId) {
+          return item
+        }
+
+        const targetSetIndex = item.sets.findIndex((set) => set.id === setId)
+        if (targetSetIndex < 0) {
+          return item
+        }
+
+        const nextSets = item.sets.map((set) =>
+          set.id === setId ? { ...set, [key]: normalizedValue } : set,
+        )
+
+        if (key === 'kg' && targetSetIndex === 0) {
+          return {
+            ...item,
+            sets: nextSets.map((set, index) =>
+              index === 0 || set.kg.length > 0 ? set : { ...set, kg: normalizedValue },
+            ),
+          }
+        }
+
+        return {
+          ...item,
+          sets: nextSets,
+        }
+      }),
+    )
+  }
+
+  const clearSetDefaultOnFocus = (
+    exerciseId: string,
+    setId: string,
+    key: 'reps' | 'kg' | 'rir',
+  ) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== exerciseId) {
+          return item
+        }
+
+        return {
+          ...item,
+          sets: item.sets.map((set) => {
+            if (set.id !== setId) {
+              return set
             }
-          : item,
-      ),
+
+            if (key === 'reps' && set.reps === '1') {
+              return { ...set, reps: '' }
+            }
+
+            if (key === 'kg' && set.kg === '0') {
+              return { ...set, kg: '' }
+            }
+
+            if (key === 'rir' && set.rir === '1') {
+              return { ...set, rir: '' }
+            }
+
+            return set
+          }),
+        }
+      }),
+    )
+  }
+
+  const removeSet = (exerciseId: string, setId: string) => {
+    setHasOverrides(true)
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== exerciseId || item.sets.length <= 1) {
+          return item
+        }
+
+        return {
+          ...item,
+          sets: item.sets.filter((set) => set.id !== setId),
+        }
+      }),
     )
   }
 
@@ -379,39 +466,61 @@ export const LogWorkoutPage = () => {
 
           {!exercise.collapsed && (
             <>
-              <div className="grid grid-cols-4 gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              <div className="grid grid-cols-[0.7fr_1fr_1fr_1fr_auto] gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                 <span>Set</span>
                 <span>Reps</span>
                 <span>Kg</span>
                 <span>RIR</span>
+                <span>Del</span>
               </div>
 
               {exercise.sets.map((set, setIndex) => (
-                <div className="grid grid-cols-4 gap-2" key={set.id}>
+                <div className="grid grid-cols-[0.7fr_1fr_1fr_1fr_auto] gap-2" key={set.id}>
                   <div className="flex min-h-11 items-center rounded-lg border border-[var(--border-muted)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text)]">
                     {setIndex + 1}
                   </div>
                   <Input
                     id={`reps-${set.id}`}
+                    inputMode="numeric"
                     label="Reps"
                     onChange={(event) =>
                       updateSet(exercise.id, set.id, 'reps', event.target.value)
                     }
+                    onFocus={() => clearSetDefaultOnFocus(exercise.id, set.id, 'reps')}
+                    pattern="[0-9]*"
+                    placeholder="1"
+                    type="number"
                     value={set.reps}
                   />
                   <Input
                     id={`kg-${set.id}`}
+                    inputMode="decimal"
                     label="Kg"
                     onChange={(event) => updateSet(exercise.id, set.id, 'kg', event.target.value)}
+                    onFocus={() => clearSetDefaultOnFocus(exercise.id, set.id, 'kg')}
+                    placeholder="0"
+                    step="0.5"
+                    type="number"
                     value={set.kg}
                   />
                   <Input
                     id={`rir-${set.id}`}
+                    inputMode="numeric"
                     label="RIR"
                     onChange={(event) => updateSet(exercise.id, set.id, 'rir', event.target.value)}
-                    placeholder="2"
+                    onFocus={() => clearSetDefaultOnFocus(exercise.id, set.id, 'rir')}
+                    pattern="[0-9]*"
+                    placeholder="1"
+                    type="number"
                     value={set.rir}
                   />
+                  <Button
+                    onClick={() => removeSet(exercise.id, set.id)}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    ✕
+                  </Button>
                 </div>
               ))}
 
