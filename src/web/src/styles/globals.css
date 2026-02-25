@@ -1,43 +1,44 @@
-﻿@import "tailwindcss";
+﻿@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
 
 :root {
-  --surface-0: #f4f7f5;
-  --surface-1: #ffffff;
-  --surface-2: #eef3ef;
-  --surface-3: #dde7e1;
-  --surface-accent: rgba(15, 159, 110, 0.16);
-  --text-strong: #0f1f17;
-  --text: #1f3328;
-  --text-muted: #5d7468;
-  --border: #cfddd4;
-  --border-muted: #e2ebe5;
-  --border-strong: #8ea99a;
-  --accent: #0f9f6e;
-  --accent-hover: #0c835a;
-  --accent-contrast: #f4fffa;
-  --accent-soft: rgba(15, 159, 110, 0.2);
-  --accent-text: #0f7a56;
-  --card-shadow: 0 14px 35px rgba(18, 61, 43, 0.12);
+  --surface-0: #faf6ff;
+  --surface-1: rgba(255, 255, 255, 0.88);
+  --surface-2: #f3ebff;
+  --surface-3: #e5d8ff;
+  --surface-accent: rgba(244, 201, 255, 0.45);
+  --text-strong: #2f2445;
+  --text: #4a3f61;
+  --text-muted: #7f7399;
+  --border: rgba(205, 189, 236, 0.82);
+  --border-muted: rgba(229, 218, 248, 0.75);
+  --border-strong: #b4a0de;
+  --accent: #a674f9;
+  --accent-hover: #935ce8;
+  --accent-contrast: #fff9ff;
+  --accent-soft: rgba(166, 116, 249, 0.18);
+  --accent-text: #7444c6;
+  --card-shadow: 0 20px 40px rgba(164, 128, 217, 0.2);
 }
 
 :root[data-theme='dark'] {
-  --surface-0: #0b1511;
-  --surface-1: #12201a;
-  --surface-2: #182a23;
-  --surface-3: #213931;
-  --surface-accent: rgba(45, 212, 153, 0.22);
-  --text-strong: #e7f5ee;
-  --text: #cae3d8;
-  --text-muted: #8fb0a1;
-  --border: #2c4a3d;
-  --border-muted: #213c31;
-  --border-strong: #4e7462;
-  --accent: #2dd499;
-  --accent-hover: #1cb17d;
-  --accent-contrast: #042216;
-  --accent-soft: rgba(45, 212, 153, 0.24);
-  --accent-text: #88f0c8;
-  --card-shadow: 0 14px 35px rgba(1, 12, 8, 0.45);
+  --surface-0: #1a1427;
+  --surface-1: rgba(37, 30, 54, 0.88);
+  --surface-2: #2b2141;
+  --surface-3: #3d2f5d;
+  --surface-accent: rgba(144, 120, 255, 0.28);
+  --text-strong: #f6edff;
+  --text: #dccdf7;
+  --text-muted: #b6a5d7;
+  --border: rgba(97, 80, 135, 0.78);
+  --border-muted: rgba(70, 57, 104, 0.8);
+  --border-strong: #8f76c9;
+  --accent: #c39bff;
+  --accent-hover: #b086f6;
+  --accent-contrast: #25173f;
+  --accent-soft: rgba(195, 155, 255, 0.22);
+  --accent-text: #eddcff;
+  --card-shadow: 0 24px 50px rgba(10, 5, 23, 0.45);
 }
 
 @layer base {
@@ -47,9 +48,13 @@
 
   body {
     background-color: var(--surface-0);
-    background-image: radial-gradient(circle at top right, var(--surface-accent), transparent 50%);
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(252, 224, 255, 0.75), transparent 36%),
+      radial-gradient(circle at 100% 0%, var(--surface-accent), transparent 42%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, transparent 48%);
     color: var(--text);
-    font-family: "Plus Jakarta Sans", "Manrope", "Segoe UI", sans-serif;
+    font-family: 'Outfit', 'Plus Jakarta Sans', 'Manrope', 'Segoe UI', sans-serif;
+    letter-spacing: 0.01em;
   }
 
   *:focus-visible {
@@ -63,8 +68,11 @@
     }
 
     body {
-      background: radial-gradient(circle at top, #581c87 0%, #2e1065 38%, #0f0224 100%);
-      color: #ede9fe;
+      background:
+        radial-gradient(circle at 25% 0%, rgba(172, 124, 255, 0.24), transparent 28%),
+        radial-gradient(circle at top right, rgba(103, 198, 255, 0.2), transparent 38%),
+        linear-gradient(180deg, #120d1d 0%, #1a1329 44%, #1f1630 100%);
+      color: var(--text);
     }
   }
 }
