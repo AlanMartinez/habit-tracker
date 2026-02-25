@@ -57,6 +57,12 @@ export const WorkoutDashboardPage = () => {
     if (!context?.routineId) {
       return
     }
+
+    if (context.hasActiveSession) {
+      navigate('/app/workout/log')
+      return
+    }
+
     setDayPickerOpen(true)
   }
 
@@ -92,7 +98,7 @@ export const WorkoutDashboardPage = () => {
               Selected day: {selectedDayLabel} - {context.exercises.length} exercises
             </p>
             <Button className="w-full" onClick={onStartWorkout} size="lg">
-              Start workout
+              {context.hasActiveSession ? 'Edit today workout' : 'Start workout'}
             </Button>
           </Card>
 
