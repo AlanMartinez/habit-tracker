@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+﻿import { NavLink } from 'react-router-dom'
 import { cn } from '../lib/cn'
 import type { BottomNavItem } from '../types/ui'
 
@@ -14,7 +14,7 @@ type BottomNavProps = {
 }
 
 export const BottomNav = ({ items = defaultItems }: BottomNavProps) => (
-  <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white px-2 pb-2 pt-2 md:left-1/2 md:max-w-3xl md:-translate-x-1/2 md:rounded-t-2xl md:border md:shadow-lg">
+  <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border)] bg-[color:var(--surface-1)]/95 px-2 pb-2 pt-2 backdrop-blur md:left-1/2 md:max-w-3xl md:-translate-x-1/2 md:rounded-t-2xl md:border md:shadow-[var(--card-shadow)]">
     <ul className="grid grid-cols-4 gap-1">
       {items.map((item) => (
         <li key={item.key}>
@@ -22,7 +22,9 @@ export const BottomNav = ({ items = defaultItems }: BottomNavProps) => (
             className={({ isActive }) =>
               cn(
                 'flex min-h-11 items-center justify-center rounded-lg px-2 text-sm font-medium transition',
-                isActive ? 'bg-teal-100 text-teal-700' : 'text-slate-600 hover:bg-slate-100',
+                isActive
+                  ? 'bg-[var(--accent-soft)] text-[var(--accent-text)]'
+                  : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]',
               )
             }
             to={item.to}

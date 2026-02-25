@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+﻿import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { cn } from '../lib/cn'
 import type { ButtonSize, ButtonVariant } from '../types/ui'
 
@@ -11,11 +11,11 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'bg-teal-600 text-white hover:bg-teal-700 focus-visible:outline-teal-600 disabled:bg-slate-300 disabled:text-slate-600',
+    'bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)] focus-visible:outline-[var(--accent)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-muted)]',
   secondary:
-    'border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 focus-visible:outline-slate-500 disabled:text-slate-400',
+    'border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text)] hover:bg-[var(--surface-3)] focus-visible:outline-[var(--border-strong)] disabled:text-[var(--text-muted)]',
   ghost:
-    'bg-transparent text-slate-700 hover:bg-slate-100 focus-visible:outline-slate-500 disabled:text-slate-400',
+    'bg-transparent text-[var(--text)] hover:bg-[var(--surface-2)] focus-visible:outline-[var(--border-strong)] disabled:text-[var(--text-muted)]',
 }
 
 const sizeClasses: Record<ButtonSize, string> = {

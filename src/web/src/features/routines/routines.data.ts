@@ -1,4 +1,4 @@
-import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
+﻿import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 import { routineStore } from '../../firebase/firestore'
 import { db } from '../../firebase/firebase'
 import type {
@@ -6,34 +6,13 @@ import type {
   Routine,
   RoutineDay,
   RoutineDayExercise,
-  RoutineType,
   WithId,
 } from '../../shared/types/firestore'
 
-type TemplateDay = {
-  id: string
-  label: string
-}
+export type DaysPerWeek = 3 | 4 | 5
 
 export type RoutineDayWithExercises = WithId<RoutineDay> & {
   exercises: Array<WithId<RoutineDayExercise>>
-}
-
-const TEMPLATE_DAYS: Record<RoutineType, TemplateDay[]> = {
-  AB: [
-    { id: 'a', label: 'A' },
-    { id: 'b', label: 'B' },
-  ],
-  PPL: [
-    { id: 'push', label: 'Push' },
-    { id: 'pull', label: 'Pull' },
-    { id: 'legs', label: 'Legs' },
-  ],
-}
-
-const DEFAULT_DAY_ORDER: Record<RoutineType, string[]> = {
-  AB: ['a', 'b', 'a', 'b'],
-  PPL: ['push', 'pull', 'legs', 'push', 'pull', 'legs'],
 }
 
 const toItemId = (): string =>
@@ -42,6 +21,25 @@ const toItemId = (): string =>
 
 const sortByOrder = <T extends { order: number }>(items: T[]): T[] =>
   [...items].sort((a, b) => a.order - b.order)
+
+const toDayId = (index: number): string => `day-${index + 1}`
+
+const toDefaultDayLabel = (index: number): string => `Day ${index + 1}`
+
+const resolveDaysPerWeek = (routine: WithId<Routine>): DaysPerWeek => {
+  const fallbackByType = routine.type === 'AB' ? 4 : 3
+  const fromRoutine = routine.daysPerWeek ?? routine.dayOrder.length ?? fallbackByType
+  if (fromRoutine >= 5) {
+    return 5
+  }
+  if (fromRoutine >= 4) {
+    return 4
+  }
+  return 3
+}
+
+const getDefaultDayOrder = (daysPerWeek: DaysPerWeek): string[] =>
+  Array.from({ length: daysPerWeek }, (_, index) => toDayId(index))
 
 const upsertActiveRoutine = async (uid: string, routineId: string | null): Promise<void> => {
   const reference = doc(db, 'users', uid)
@@ -65,37 +63,42 @@ const upsertActiveRoutine = async (uid: string, routineId: string | null): Promi
   })
 }
 
-export const getTemplateDays = (type: RoutineType): TemplateDay[] => TEMPLATE_DAYS[type]
-
-export const getDefaultDayOrder = (type: RoutineType): string[] => DEFAULT_DAY_ORDER[type]
-
 const ensureRoutineDays = async (
   uid: string,
-  routineId: string,
-  type: RoutineType,
+  routine: WithId<Routine>,
 ): Promise<Array<WithId<RoutineDay>>> => {
-  const existingDays = await routineStore.listDays(uid, routineId)
-  const templateIds = new Set(getTemplateDays(type).map((day) => day.id))
-  const templateDays = getTemplateDays(type)
+  const daysPerWeek = resolveDaysPerWeek(routine)
+  const existingDays = await routineStore.listDays(uid, routine.id)
+  const existingById = new Map(existingDays.map((day) => [day.id, day]))
+  const targetDayIds = Array.from({ length: daysPerWeek }, (_, index) => toDayId(index))
 
   await Promise.all(
-    templateDays.map((day, index) =>
-      routineStore.upsertDay(uid, routineId, day.id, {
-        label: day.label,
+    targetDayIds.map((dayId, index) => {
+      const existing = existingById.get(dayId)
+      return routineStore.upsertDay(uid, routine.id, dayId, {
+        label: existing?.label ?? toDefaultDayLabel(index),
         order: index,
-      }),
-    ),
+        exerciseOrder: existing?.exerciseOrder ?? [],
+      })
+    }),
   )
 
-  if (existingDays.length > templateDays.length) {
-    await Promise.all(
-      existingDays
-        .filter((day) => !templateIds.has(day.id))
-        .map((day) => routineStore.removeDay(uid, routineId, day.id)),
-    )
+  const targetIds = new Set(targetDayIds)
+  await Promise.all(
+    existingDays
+      .filter((day) => !targetIds.has(day.id))
+      .map((day) => routineStore.removeDay(uid, routine.id, day.id)),
+  )
+
+  if (routine.dayOrder.join('|') !== targetDayIds.join('|') || routine.daysPerWeek !== daysPerWeek) {
+    await routineStore.update(uid, routine.id, {
+      dayOrder: targetDayIds,
+      daysPerWeek,
+      type: 'CUSTOM',
+    })
   }
 
-  return routineStore.listDays(uid, routineId)
+  return routineStore.listDays(uid, routine.id)
 }
 
 export const listRoutines = async (uid: string): Promise<Array<WithId<Routine>>> =>
@@ -103,18 +106,20 @@ export const listRoutines = async (uid: string): Promise<Array<WithId<Routine>>>
 
 export const createRoutine = async (
   uid: string,
-  input: Pick<NewRoutineInput, 'name' | 'type'>,
+  input: Pick<NewRoutineInput, 'name' | 'daysPerWeek'>,
 ): Promise<string> => {
+  const dayOrder = getDefaultDayOrder(input.daysPerWeek as DaysPerWeek)
   const routineId = await routineStore.create(uid, {
-    ...input,
-    dayOrder: getDefaultDayOrder(input.type),
+    name: input.name,
+    daysPerWeek: input.daysPerWeek,
+    type: 'CUSTOM',
+    dayOrder,
   })
 
-  const templateDays = getTemplateDays(input.type)
   await Promise.all(
-    templateDays.map((day, index) =>
-      routineStore.upsertDay(uid, routineId, day.id, {
-        label: day.label,
+    dayOrder.map((dayId, index) =>
+      routineStore.upsertDay(uid, routineId, dayId, {
+        label: toDefaultDayLabel(index),
         order: index,
       }),
     ),
@@ -161,36 +166,64 @@ export const getRoutineBuilderData = async (
     throw new Error('Routine not found.')
   }
 
-  const days = await ensureRoutineDays(uid, routine.id, routine.type)
+  const days = await ensureRoutineDays(uid, routine)
   const daysWithExercises = await Promise.all(
     sortByOrder(days).map(async (day) => {
       const exercises = await routineStore.listDayExercises(uid, routine.id, day.id)
       return {
         ...day,
-        exercises: sortByOrder(exercises),
+        exercises: sortByOrder(exercises).map((exercise) => ({
+          ...exercise,
+          targetRepsMin: exercise.targetRepsMin ?? 8,
+          targetRepsMax: exercise.targetRepsMax ?? 12,
+          targetSets: exercise.targetSets ?? 3,
+        })),
       }
     }),
   )
 
   return {
-    routine,
+    routine: {
+      ...routine,
+      daysPerWeek: resolveDaysPerWeek(routine),
+      type: 'CUSTOM',
+    },
     days: daysWithExercises,
   }
 }
 
-export const updateRoutineSchedule = async (
+export const renameRoutineDay = async (
   uid: string,
   routineId: string,
-  dayOrder: string[],
+  dayId: string,
+  nextLabel: string,
 ): Promise<void> => {
-  await routineStore.update(uid, routineId, { dayOrder })
+  const days = await routineStore.listDays(uid, routineId)
+  const currentDay = days.find((day) => day.id === dayId)
+
+  if (!currentDay) {
+    throw new Error('Routine day not found.')
+  }
+
+  await routineStore.upsertDay(uid, routineId, dayId, {
+    label: nextLabel,
+    order: currentDay.order,
+    exerciseOrder: currentDay.exerciseOrder,
+  })
 }
 
 export const replaceDayExercises = async (
   uid: string,
   routineId: string,
   dayId: string,
-  exercises: Array<{ itemId?: string; exerciseId: string; nameSnapshot: string }>,
+  exercises: Array<{
+    itemId?: string
+    exerciseId: string
+    nameSnapshot: string
+    targetRepsMin: number
+    targetRepsMax: number
+    targetSets: number
+  }>,
 ): Promise<void> => {
   const previous = await routineStore.listDayExercises(uid, routineId, dayId)
   const allDays = await routineStore.listDays(uid, routineId)
@@ -199,6 +232,9 @@ export const replaceDayExercises = async (
     itemId: item.itemId ?? toItemId(),
     exerciseId: item.exerciseId,
     nameSnapshot: item.nameSnapshot,
+    targetRepsMin: item.targetRepsMin,
+    targetRepsMax: item.targetRepsMax,
+    targetSets: item.targetSets,
   }))
 
   await Promise.all(
@@ -206,6 +242,9 @@ export const replaceDayExercises = async (
       routineStore.upsertDayExercise(uid, routineId, dayId, item.itemId, {
         exerciseId: item.exerciseId,
         nameSnapshot: item.nameSnapshot,
+        targetRepsMin: item.targetRepsMin,
+        targetRepsMax: item.targetRepsMax,
+        targetSets: item.targetSets,
         order: index,
       }),
     ),

@@ -1,4 +1,4 @@
-import type { SelectHTMLAttributes } from 'react'
+﻿import type { SelectHTMLAttributes } from 'react'
 import { cn } from '../lib/cn'
 import type { FieldOption } from '../types/ui'
 
@@ -22,13 +22,15 @@ export const Select = ({
 
   return (
     <label className="block space-y-1.5" htmlFor={id}>
-      <span className="text-sm font-medium text-slate-700">{label}</span>
+      <span className="text-sm font-medium text-[var(--text)]">{label}</span>
       <select
         aria-describedby={describedBy}
         aria-invalid={Boolean(error)}
         className={cn(
-          'min-h-11 w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus-visible:ring-2 focus-visible:ring-teal-500/30',
-          error ? 'border-red-500 focus-visible:border-red-500' : 'border-slate-200 focus-visible:border-teal-600',
+          'min-h-11 w-full rounded-lg border bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-strong)] outline-none transition focus-visible:ring-2 focus-visible:ring-[color:var(--accent-soft)]',
+          error
+            ? 'border-red-500 focus-visible:border-red-500'
+            : 'border-[var(--border)] focus-visible:border-[var(--accent)]',
           className,
         )}
         id={id}
@@ -41,7 +43,7 @@ export const Select = ({
         ))}
       </select>
       {helperText && !error && (
-        <p className="text-xs text-slate-500" id={`${id}-help`}>
+        <p className="text-xs text-[var(--text-muted)]" id={`${id}-help`}>
           {helperText}
         </p>
       )}

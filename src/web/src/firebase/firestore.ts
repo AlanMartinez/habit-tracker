@@ -31,7 +31,6 @@ import type {
   RoutineDayExercise,
   SessionExercise,
   SessionSet,
-  UserProfile,
   WithId,
   WorkoutSession,
 } from '../shared/types/firestore';
@@ -107,54 +106,6 @@ const sessionExercisesCol = (uid: string, sessionId: string) =>
 const sessionSetsCol = (uid: string, sessionId: string, sessionExerciseId: string) =>
   collection(db, 'users', uid, 'workoutSessions', sessionId, 'exercises', sessionExerciseId, 'sets');
 
-export const userStore = {
-  async get(uid: string): Promise<WithId<UserProfile> | null> {
-    const snapshot = await getDoc(doc(db, 'users', uid));
-    return snapshot.exists() ? withId<UserProfile>(snapshot.id, snapshot.data()) : null;
-  },
-
-  async upsert(
-    uid: string,
-    payload: Partial<Pick<UserProfile, 'displayName' | 'email' | 'photoURL' | 'selectedModule' | 'activeRoutineId'>>,
-  ): Promise<void> {
-    const reference = doc(db, 'users', uid);
-    const snapshot = await getDoc(reference);
-    const updates: Record<string, unknown> = {
-      ...stampForUpdate(),
-    };
-
-    if (payload.displayName !== undefined) {
-      updates.displayName = toRequiredString(payload.displayName, 'Display name');
-    }
-    if (payload.email !== undefined) {
-      updates.email = toRequiredString(payload.email, 'Email');
-    }
-    if (payload.photoURL !== undefined) {
-      updates.photoURL = toOptionalString(payload.photoURL);
-    }
-    if (payload.selectedModule !== undefined) {
-      updates.selectedModule = payload.selectedModule;
-    }
-    if (payload.activeRoutineId !== undefined) {
-      updates.activeRoutineId = toOptionalString(payload.activeRoutineId);
-    }
-
-    if (snapshot.exists()) {
-      await updateDoc(reference, updates);
-      return;
-    }
-
-    await setDoc(reference, {
-      displayName: payload.displayName ?? 'Gym User',
-      email: payload.email ?? 'unknown@example.com',
-      photoURL: toOptionalString(payload.photoURL),
-      selectedModule: payload.selectedModule ?? 'GYM',
-      activeRoutineId: toOptionalString(payload.activeRoutineId),
-      ...stampForCreate(),
-    });
-  },
-};
-
 export const exerciseStore = {
   async list(uid: string): Promise<Array<WithId<Exercise>>> {
     const snapshot = await getDocs(query(exercisesCol(uid), orderBy('name', 'asc')));
@@ -223,6 +174,7 @@ export const routineStore = {
       ownerUid: uid,
       name: toRequiredString(payload.name, 'Routine name'),
       type: payload.type,
+      daysPerWeek: payload.daysPerWeek,
       isActive: payload.isActive ?? false,
       dayOrder: payload.dayOrder ?? [],
       ...stampForCreate(),
@@ -240,6 +192,9 @@ export const routineStore = {
     }
     if (payload.type !== undefined) {
       updates.type = payload.type;
+    }
+    if (payload.daysPerWeek !== undefined) {
+      updates.daysPerWeek = payload.daysPerWeek;
     }
     if (payload.isActive !== undefined) {
       updates.isActive = payload.isActive;
@@ -305,6 +260,9 @@ export const routineStore = {
       {
         exerciseId: toRequiredString(payload.exerciseId, 'Exercise id'),
         nameSnapshot: toRequiredString(payload.nameSnapshot, 'Exercise name snapshot'),
+        targetRepsMin: payload.targetRepsMin,
+        targetRepsMax: payload.targetRepsMax,
+        targetSets: payload.targetSets,
         order: payload.order,
       },
     );

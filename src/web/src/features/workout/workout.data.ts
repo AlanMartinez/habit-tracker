@@ -1,9 +1,12 @@
-import { exerciseStore, routineStore, userStore, workoutStore } from '../../firebase/firestore'
+﻿import { doc, getDoc } from 'firebase/firestore'
+import { exerciseStore, routineStore, workoutStore } from '../../firebase/firestore'
+import { db } from '../../firebase/firebase'
 import type {
   DateIso,
   Exercise,
   RoutineType,
   SessionSet,
+  UserProfile,
   WithId,
 } from '../../shared/types/firestore'
 
@@ -20,6 +23,9 @@ export type WorkoutDraftExercise = {
   order: number
   exerciseId?: string
   nameSnapshot: string
+  targetRepsMin?: number
+  targetRepsMax?: number
+  targetSets?: number
   sets: WorkoutDraftSet[]
 }
 
@@ -30,6 +36,7 @@ export type WorkoutDraft = {
   routineName?: string
   routineDayId?: string
   routineDayLabel?: string
+  routineDays: Array<{ id: string; label: string }>
   isFromActiveRoutine: boolean
   hasSessionOverrides: boolean
   exercises: WorkoutDraftExercise[]
@@ -53,6 +60,12 @@ export type SaveWorkoutInput = {
       rpe?: number
     }>
   }>
+}
+
+export type RoutineDayTemplateDraft = {
+  routineDayId: string
+  routineDayLabel?: string
+  exercises: WorkoutDraftExercise[]
 }
 
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
@@ -93,14 +106,21 @@ const toDraftSet = (item: WithId<SessionSet>): WorkoutDraftSet => ({
   rpe: item.rpe,
 })
 
-export const getTodayWorkoutDraft = async (uid: string): Promise<WorkoutDraft> => {
+export const getTodayWorkoutDraft = async (
+  uid: string,
+  options?: { routineDayId?: string },
+): Promise<WorkoutDraft> => {
   const dateKey = getDateKey(new Date())
   const availableExercises = await exerciseStore.list(uid)
-  const userProfile = await userStore.get(uid)
+  const userSnapshot = await getDoc(doc(db, 'users', uid))
+  const userProfile = userSnapshot.exists()
+    ? (userSnapshot.data() as UserProfile)
+    : null
 
   if (!userProfile?.activeRoutineId) {
     return {
       dateKey,
+      routineDays: [],
       isFromActiveRoutine: false,
       hasSessionOverrides: false,
       exercises: [],
@@ -112,6 +132,7 @@ export const getTodayWorkoutDraft = async (uid: string): Promise<WorkoutDraft> =
   if (!routine) {
     return {
       dateKey,
+      routineDays: [],
       isFromActiveRoutine: false,
       hasSessionOverrides: false,
       exercises: [],
@@ -124,10 +145,17 @@ export const getTodayWorkoutDraft = async (uid: string): Promise<WorkoutDraft> =
   const normalizedDayOrder = routine.dayOrder.filter((dayId) => dayById.has(dayId))
   const fallbackDayOrder = days.map((day) => day.id)
   const mappedDayId = getMappedDayId(normalizedDayOrder, fallbackDayOrder, new Date())
-  const mappedDay = mappedDayId ? dayById.get(mappedDayId) : undefined
+  const selectedDayId = options?.routineDayId && dayById.has(options.routineDayId)
+    ? options.routineDayId
+    : mappedDayId
+  const selectedDay = selectedDayId ? dayById.get(selectedDayId) : undefined
 
   const existingSession = await workoutStore.get(uid, dateKey)
-  if (existingSession) {
+  // If user explicitly selects a routine day from Start Workout,
+  // always rebuild the draft from that day template.
+  const shouldUseExistingSession = Boolean(existingSession) && !options?.routineDayId
+
+  if (existingSession && shouldUseExistingSession) {
     const sessionExercises = await workoutStore.listExercises(uid, existingSession.id)
     const exercises = await Promise.all(
       sessionExercises.map(async (item) => {
@@ -149,6 +177,7 @@ export const getTodayWorkoutDraft = async (uid: string): Promise<WorkoutDraft> =
       routineName: routine.name,
       routineDayId: existingSession.routineDayId,
       routineDayLabel: existingSession.routineDayLabel,
+      routineDays: days.map((day) => ({ id: day.id, label: day.label })),
       isFromActiveRoutine: existingSession.isFromActiveRoutine,
       hasSessionOverrides: existingSession.hasSessionOverrides,
       exercises,
@@ -156,28 +185,70 @@ export const getTodayWorkoutDraft = async (uid: string): Promise<WorkoutDraft> =
     }
   }
 
-  const routineDayExercises = mappedDayId
-    ? await routineStore.listDayExercises(uid, routine.id, mappedDayId)
+  const routineDayExercises = selectedDayId
+    ? await routineStore.listDayExercises(uid, routine.id, selectedDayId)
     : []
-  const draftExercises = routineDayExercises.map((item) => ({
-    id: item.id,
-    order: item.order,
-    exerciseId: item.exerciseId,
-    nameSnapshot: item.nameSnapshot,
-    sets: [toDefaultSet(0)],
-  }))
+  const draftExercises = routineDayExercises.map((item) => {
+    const targetSets = item.targetSets ?? 1
+    return {
+      id: item.id,
+      order: item.order,
+      exerciseId: item.exerciseId,
+      nameSnapshot: item.nameSnapshot,
+      targetRepsMin: item.targetRepsMin,
+      targetRepsMax: item.targetRepsMax,
+      targetSets,
+      sets: Array.from({ length: targetSets }, (_, index) => toDefaultSet(index)),
+    }
+  })
 
   return {
     dateKey,
     routineId: routine.id,
     routineType: routine.type,
     routineName: routine.name,
-    routineDayId: mappedDayId,
-    routineDayLabel: mappedDay?.label,
+    routineDayId: selectedDayId,
+    routineDayLabel: selectedDay?.label,
+    routineDays: days.map((day) => ({ id: day.id, label: day.label })),
     isFromActiveRoutine: true,
     hasSessionOverrides: false,
     exercises: draftExercises,
     availableExercises,
+  }
+}
+
+export const getRoutineDayTemplateDraft = async (
+  uid: string,
+  routineId: string,
+  routineDayId: string,
+): Promise<RoutineDayTemplateDraft> => {
+  const days = await routineStore.listDays(uid, routineId)
+  const selectedDay = days.find((day) => day.id === routineDayId)
+
+  if (!selectedDay) {
+    return {
+      routineDayId,
+      exercises: [],
+    }
+  }
+
+  const dayExercises = await routineStore.listDayExercises(uid, routineId, routineDayId)
+  return {
+    routineDayId,
+    routineDayLabel: selectedDay.label,
+    exercises: dayExercises.map((item) => {
+      const targetSets = item.targetSets ?? 1
+      return {
+        id: item.id,
+        order: item.order,
+        exerciseId: item.exerciseId,
+        nameSnapshot: item.nameSnapshot,
+        targetRepsMin: item.targetRepsMin,
+        targetRepsMax: item.targetRepsMax,
+        targetSets,
+        sets: Array.from({ length: targetSets }, (_, index) => toDefaultSet(index)),
+      }
+    }),
   }
 }
 

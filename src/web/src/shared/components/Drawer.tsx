@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+﻿import { useEffect, type ReactNode } from 'react'
 import { Button } from './Button'
 
 type DrawerProps = {
@@ -29,15 +29,15 @@ export const Drawer = ({ open, title, onClose, children }: DrawerProps) => {
   }
 
   return (
-    <div className="fixed inset-0 z-40 bg-slate-900/50" onClick={onClose}>
+    <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose}>
       <div
         aria-modal="true"
-        className="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-y-auto rounded-t-2xl bg-white shadow-lg"
+        className="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-y-auto rounded-t-2xl border border-[var(--border)] bg-[var(--surface-1)] shadow-[var(--card-shadow)]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <header className="sticky top-0 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+        <header className="sticky top-0 flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-1)] px-4 py-3">
+          <h2 className="text-lg font-semibold text-[var(--text-strong)]">{title}</h2>
           <Button aria-label="Close" onClick={onClose} size="sm" variant="ghost">
             Close
           </Button>

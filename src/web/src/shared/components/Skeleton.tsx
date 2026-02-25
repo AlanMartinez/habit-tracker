@@ -1,4 +1,4 @@
-import { cn } from '../lib/cn'
+﻿import { cn } from '../lib/cn'
 
 type SkeletonVariant = 'row' | 'card' | 'calendar'
 
@@ -16,6 +16,6 @@ const variantClasses: Record<SkeletonVariant, string> = {
 export const Skeleton = ({ variant = 'row', className }: SkeletonProps) => (
   <div
     aria-hidden="true"
-    className={cn('animate-pulse bg-slate-200', variantClasses[variant], className)}
+    className={cn('animate-pulse bg-[var(--surface-3)]', variantClasses[variant], className)}
   />
 )

@@ -9,7 +9,7 @@ export const PublicOnlyGuard = () => {
   }
 
   if (user) {
-    return <Navigate replace to="/module-select" />
+    return <Navigate replace to="/app/modules" />
   }
 
   return <Outlet />

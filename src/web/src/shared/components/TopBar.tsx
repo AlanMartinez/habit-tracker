@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+﻿import type { ReactNode } from 'react'
 import { Button } from './Button'
 
 type TopBarProps = {
@@ -9,7 +9,7 @@ type TopBarProps = {
 }
 
 export const TopBar = ({ title, subtitle, onBack, rightAction }: TopBarProps) => (
-  <header className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50/95 px-4 py-3 backdrop-blur">
+  <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[color:var(--surface-1)]/95 px-4 py-3 backdrop-blur">
     <div className="mx-auto flex w-full max-w-3xl items-start justify-between gap-3">
       <div className="flex items-start gap-2">
         {onBack && (
@@ -18,8 +18,8 @@ export const TopBar = ({ title, subtitle, onBack, rightAction }: TopBarProps) =>
           </Button>
         )}
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
-          {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
+          <h1 className="text-xl font-semibold text-[var(--text-strong)]">{title}</h1>
+          {subtitle && <p className="text-xs text-[var(--text-muted)]">{subtitle}</p>}
         </div>
       </div>
       {rightAction}
