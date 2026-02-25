@@ -1,29 +1,34 @@
-import { Navigate } from 'react-router-dom'
-import { useAuth } from '../../app/providers/useAuth'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Button, Card } from '../../shared/components'
 
 export const LoginPage = () => {
-  const { isLoading, signInWithGoogle, user } = useAuth()
+  const navigate = useNavigate()
+  const [isLoading, setIsLoading] = useState(false)
+  const [error] = useState<string | null>(null)
 
-  if (user) {
-    return <Navigate replace to="/module-select" />
+  const onContinue = () => {
+    setIsLoading(true)
+
+    window.setTimeout(() => {
+      setIsLoading(false)
+      navigate('/app/modules')
+    }, 500)
   }
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md items-center px-4">
-      <section className="w-full rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h1 className="text-xl font-semibold text-slate-900">Gym Habits Tracker</h1>
-        <p className="mt-2 text-sm text-slate-600">Sign in with Google to continue.</p>
-        <button
-          className="mt-4 w-full rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-          disabled={isLoading}
-          onClick={() => {
-            void signInWithGoogle()
-          }}
-          type="button"
-        >
-          Continue with Google
-        </button>
-      </section>
+      <Card className="w-full space-y-4">
+        <div className="space-y-2 text-center">
+          <h1 className="text-2xl font-bold text-slate-900">HabitTracker</h1>
+          <p className="text-sm text-slate-600">Train. Log. Improve.</p>
+        </div>
+        <Button className="w-full" loading={isLoading} onClick={onContinue} size="lg">
+          {isLoading ? 'Signing in...' : 'Continue with Google'}
+        </Button>
+        {error && <p className="text-center text-sm text-red-600">{error}</p>}
+        <p className="text-center text-xs text-slate-500">Secure sign-in</p>
+      </Card>
     </main>
   )
 }
