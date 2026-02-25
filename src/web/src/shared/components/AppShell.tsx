@@ -1,9 +1,10 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { BottomNav } from './BottomNav'
 import { Button } from './Button'
 import { TopBar } from './TopBar'
+import { IconMoon, IconSparkles, IconSun } from './icons'
 
 type AppShellProps = {
   title: string
@@ -55,6 +56,7 @@ export const AppShell = ({
           <div className="flex items-center gap-2">
             {rightAction}
             <Button
+              leadingIcon={theme === 'light' ? <IconMoon className="h-4 w-4" /> : <IconSun className="h-4 w-4" />}
               onClick={() => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))}
               size="sm"
               variant="secondary"
@@ -66,7 +68,13 @@ export const AppShell = ({
         subtitle={subtitle}
         title={title}
       />
-      <main className="mx-auto w-full max-w-3xl space-y-4 px-4 py-4">{children}</main>
+      <main className="mx-auto w-full max-w-3xl space-y-4 px-4 py-4">
+        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-1)] px-2.5 py-1 text-xs font-semibold text-[var(--text-muted)]">
+          <IconSparkles className="h-3.5 w-3.5" />
+          Focus mode
+        </div>
+        {children}
+      </main>
       {withNav && <BottomNav />}
     </div>
   )
