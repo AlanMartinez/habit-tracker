@@ -34,6 +34,7 @@ export const AppRouter = () => (
         <Route path="/exercises" element={<ExercisesPage />} />
         <Route path="/routines" element={<RoutinesPage />} />
         <Route path="/routine-builder" element={<RoutineBuilderPage />} />
+        <Route path="/routine-builder/:routineId" element={<RoutineBuilderPage />} />
         <Route path="/log-workout" element={<LogWorkoutPage />} />
         <Route path="/history" element={<HistoryPage />} />
       </Route>
