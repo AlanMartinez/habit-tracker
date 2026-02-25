@@ -72,6 +72,18 @@ const withId = <T extends DocumentData>(id: string, data: DocumentData): WithId<
   ...(data as T),
 });
 
+const stripUndefined = (payload: Record<string, unknown>): Record<string, unknown> => {
+  const next: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(payload)) {
+    if (value !== undefined) {
+      next[key] = value;
+    }
+  }
+
+  return next;
+};
+
 const upsertOwnedDoc = async (
   reference: DocumentReference,
   uid: string,
@@ -81,7 +93,7 @@ const upsertOwnedDoc = async (
 
   if (snapshot.exists()) {
     await updateDoc(reference, {
-      ...payload,
+      ...stripUndefined(payload),
       ...stampForUpdate(),
     });
     return;
@@ -89,7 +101,7 @@ const upsertOwnedDoc = async (
 
   await setDoc(reference, {
     ownerUid: uid,
-    ...payload,
+    ...stripUndefined(payload),
     ...stampForCreate(),
   });
 };
