@@ -23,6 +23,9 @@ export const ModuleSelectPage = () => {
           <Link className="text-blue-700 underline" to="/history">
             View history
           </Link>
+          <Link className="text-blue-700 underline" to="/log-workout">
+            Log workout
+          </Link>
           <button
             className="rounded-md border border-slate-300 px-3 py-1 text-slate-700"
             onClick={() => {
