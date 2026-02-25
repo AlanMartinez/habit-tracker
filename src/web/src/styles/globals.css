@@ -1,1 +1,14 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #f8fafc;
+    color: #0f172a;
+    font-family: "Plus Jakarta Sans", "Manrope", "Segoe UI", sans-serif;
+  }
+
+  *:focus-visible {
+    outline: 2px solid #0ea5a4;
+    outline-offset: 2px;
+  }
+}
