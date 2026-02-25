@@ -23,7 +23,7 @@ export const AppShell = ({
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
+    <div className="min-h-screen bg-violet-50 dark:bg-violet-950 pb-24">
       <TopBar
         onBack={onBack ?? (withNav ? undefined : () => navigate(-1))}
         rightAction={rightAction}

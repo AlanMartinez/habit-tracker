@@ -99,10 +99,10 @@ export const RoutineBuilderPage = () => {
       {selectedDay.exercises.length > 0 && (
         <Card className="space-y-2">
           {selectedDay.exercises.map((exercise, index) => (
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 p-3" key={`${exercise}-${index}`}>
+            <div className="flex items-center justify-between rounded-lg border border-violet-200 dark:border-violet-800 p-3" key={`${exercise}-${index}`}>
               <div>
-                <p className="text-sm font-semibold text-slate-900">{exercise}</p>
-                <p className="text-xs text-slate-500">Drag placeholder [::]</p>
+                <p className="text-sm font-semibold text-violet-950 dark:text-violet-100">{exercise}</p>
+                <p className="text-xs text-violet-500 dark:text-violet-400">Drag placeholder [::]</p>
               </div>
               <Button onClick={() => onRemove(index)} size="sm" variant="ghost">
                 Remove

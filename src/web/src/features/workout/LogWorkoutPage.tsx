@@ -91,7 +91,7 @@ export const LogWorkoutPage = () => {
   return (
     <AppShell subtitle="Tue, Feb 25" title="Today: Pull">
       <Card className="space-y-2">
-        <p className="text-sm text-slate-700">Active: PPL - V1</p>
+        <p className="text-sm text-violet-800 dark:text-violet-200">Active: PPL - V1</p>
         <Badge tone="info">today only edits</Badge>
       </Card>
 
@@ -123,13 +123,13 @@ export const LogWorkoutPage = () => {
       {items.map((exercise) => (
         <Card className="space-y-3" key={exercise.id}>
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-slate-900">{exercise.name}</h2>
+            <h2 className="text-base font-semibold text-violet-950 dark:text-violet-100">{exercise.name}</h2>
             <Button onClick={() => removeExercise(exercise.id)} size="sm" variant="ghost">
               Remove
             </Button>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <div className="grid grid-cols-4 gap-2 text-xs font-semibold uppercase tracking-wide text-violet-500 dark:text-violet-400">
             <span>Set</span>
             <span>Reps</span>
             <span>Kg</span>
@@ -138,7 +138,7 @@ export const LogWorkoutPage = () => {
 
           {exercise.sets.map((set, index) => (
             <div className="grid grid-cols-4 gap-2" key={set.id}>
-              <div className="flex min-h-11 items-center rounded-lg border border-slate-200 px-3 text-sm text-slate-700">
+              <div className="flex min-h-11 items-center rounded-lg border border-violet-200 dark:border-violet-800 px-3 text-sm text-violet-800 dark:text-violet-200">
                 {index + 1}
               </div>
               <Input
@@ -174,7 +174,7 @@ export const LogWorkoutPage = () => {
         </Card>
       ))}
 
-      <div className="sticky bottom-20 z-10 rounded-2xl bg-slate-50 pt-2">
+      <div className="sticky bottom-20 z-10 rounded-2xl bg-violet-50 dark:bg-violet-950 pt-2">
         <Button className="w-full shadow-[0_-4px_12px_rgba(15,23,42,0.08)]" loading={isSaving} onClick={onSave}>
           {isSaving ? 'Saving...' : 'Save Workout'}
         </Button>
