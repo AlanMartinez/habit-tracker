@@ -37,9 +37,9 @@ const toId = (): string =>
 
 const createSet = (): WorkoutSet => ({
   id: toId(),
-  reps: '',
+  reps: '1',
   kg: '',
-  rir: '',
+  rir: '1',
 })
 
 const reorderItems = <T,>(items: T[], fromIndex: number, toIndex: number): T[] => {
@@ -59,13 +59,13 @@ const mapDraftToExercise = (item: WorkoutDraft['exercises'][number]): WorkoutExe
   id: item.id,
   sourceExerciseId: item.exerciseId,
   name: item.nameSnapshot,
-  collapsed: false,
+  collapsed: true,
   sets: item.sets.length > 0
     ? item.sets.map((set) => ({
         id: set.id,
         reps: String(set.reps),
         kg: String(set.weightKg),
-        rir: set.rpe === undefined ? '' : String(set.rpe),
+        rir: String(set.rpe ?? 1),
       }))
     : [createSet()],
 })
@@ -80,6 +80,11 @@ const parseNonNegativeNumber = (value: string): number => {
     return 0
   }
   return parsed
+}
+
+const parsePositiveNumber = (value: string, fallback: number): number => {
+  const parsed = parseNonNegativeNumber(value)
+  return parsed < 1 ? fallback : parsed
 }
 
 export const LogWorkoutPage = () => {
@@ -126,7 +131,16 @@ export const LogWorkoutPage = () => {
         }
 
         setContext(nextDraft)
-        setDefaultExerciseNames(nextDraft.exercises.map((item) => item.nameSnapshot))
+        if (nextDraft.routineId && nextDraft.routineDayId) {
+          const template = await getRoutineDayTemplateDraft(
+            user.uid,
+            nextDraft.routineId,
+            nextDraft.routineDayId,
+          )
+          setDefaultExerciseNames(template.exercises.map((item) => item.nameSnapshot))
+        } else {
+          setDefaultExerciseNames([])
+        }
         setItems(nextDraft.exercises.map(mapDraftToExercise))
         setHasOverrides(nextDraft.hasSessionOverrides)
         setSelectedExercise(nextDraft.availableExercises[0]?.id ?? '')
@@ -170,9 +184,24 @@ export const LogWorkoutPage = () => {
 
   const addSet = (exerciseId: string) => {
     setItems((prev) =>
-      prev.map((item) =>
-        item.id === exerciseId ? { ...item, sets: [...item.sets, createSet()] } : item,
-      ),
+      prev.map((item) => {
+        if (item.id !== exerciseId) {
+          return item
+        }
+
+        const firstSet = item.sets[0]
+        return {
+          ...item,
+          sets: [
+            ...item.sets,
+            {
+              ...createSet(),
+              kg: firstSet?.kg ?? '',
+              rir: firstSet?.rir || '1',
+            },
+          ],
+        }
+      }),
     )
   }
 
@@ -217,9 +246,9 @@ export const LogWorkoutPage = () => {
           exerciseId: item.sourceExerciseId,
           nameSnapshot: item.name,
           sets: item.sets.map((set) => ({
-            reps: parseNonNegativeNumber(set.reps),
+            reps: parsePositiveNumber(set.reps, 1),
             weightKg: parseNonNegativeNumber(set.kg),
-            rpe: set.rir.trim() ? parseNonNegativeNumber(set.rir) : undefined,
+            rpe: parsePositiveNumber(set.rir, 1),
           })),
         })),
       })
@@ -260,15 +289,17 @@ export const LogWorkoutPage = () => {
     >
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-1)] p-6 text-center">
-        <p className="text-sm font-semibold text-[var(--text-strong)]">Default exercises for selected day</p>
+      <details className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-1)] p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-[var(--text-strong)]">
+          Default exercises for selected day
+        </summary>
         {defaultExerciseNames.length === 0 && (
-          <p className="mt-1 text-sm text-[var(--text-muted)]">No default exercises configured.</p>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">No default exercises configured.</p>
         )}
         {defaultExerciseNames.length > 0 && (
-          <p className="mt-1 text-sm text-[var(--text-muted)]">{defaultExerciseNames.join(' • ')}</p>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">{defaultExerciseNames.join(' • ')}</p>
         )}
-      </div>
+      </details>
 
       {context.availableExercises.length > 0 && (
         <Card className="space-y-3">

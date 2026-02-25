@@ -31,6 +31,7 @@ export type WorkoutDraftExercise = {
 
 export type WorkoutDraft = {
   dateKey: DateIso
+  hasActiveSession: boolean
   routineId?: string
   routineType?: RoutineType | null
   routineName?: string
@@ -80,8 +81,9 @@ const getDateKey = (date: Date): DateIso => {
 const toDefaultSet = (order: number): WorkoutDraftSet => ({
   id: `set-${order + 1}`,
   order,
-  reps: 0,
+  reps: 1,
   weightKg: 0,
+  rpe: 1,
 })
 
 const getMappedDayId = (
@@ -120,6 +122,7 @@ export const getTodayWorkoutDraft = async (
   if (!userProfile?.activeRoutineId) {
     return {
       dateKey,
+      hasActiveSession: false,
       routineDays: [],
       isFromActiveRoutine: false,
       hasSessionOverrides: false,
@@ -132,6 +135,7 @@ export const getTodayWorkoutDraft = async (
   if (!routine) {
     return {
       dateKey,
+      hasActiveSession: false,
       routineDays: [],
       isFromActiveRoutine: false,
       hasSessionOverrides: false,
@@ -172,6 +176,7 @@ export const getTodayWorkoutDraft = async (
 
     return {
       dateKey,
+      hasActiveSession: true,
       routineId: existingSession.routineId,
       routineType: existingSession.routineType ?? null,
       routineName: routine.name,
@@ -204,6 +209,7 @@ export const getTodayWorkoutDraft = async (
 
   return {
     dateKey,
+    hasActiveSession: false,
     routineId: routine.id,
     routineType: routine.type,
     routineName: routine.name,
