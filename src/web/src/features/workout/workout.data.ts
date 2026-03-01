@@ -4,6 +4,7 @@ import { db } from '../../firebase/firebase'
 import type {
   DateIso,
   Exercise,
+  ExerciseHistory,
   RoutineType,
   SessionSet,
   UserProfile,
@@ -318,4 +319,12 @@ export const saveWorkout = async (uid: string, payload: SaveWorkoutInput): Promi
   }
 
   await workoutStore.finish(uid, sessionId)
+}
+
+export const getExerciseHistoryForWorkout = async (
+  uid: string,
+  exerciseId: string,
+  todayDateKey: DateIso,
+): Promise<ExerciseHistory | null> => {
+  return workoutStore.getExerciseHistory(uid, exerciseId, todayDateKey, { maxSessions: 10 })
 }

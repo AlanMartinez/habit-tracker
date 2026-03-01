@@ -19,6 +19,7 @@ import {
 import type {
   DateIso,
   Exercise,
+  ExerciseHistory,
   NewExerciseInput,
   NewRoutineDayExerciseInput,
   NewRoutineDayInput,
@@ -475,5 +476,64 @@ export const workoutStore = {
     await deleteDoc(
       doc(db, 'users', uid, 'workoutSessions', sessionId, 'exercises', sessionExerciseId, 'sets', setId),
     );
+  },
+
+  async getExerciseHistory(
+    uid: string,
+    exerciseId: string,
+    excludeDate: DateIso,
+    options?: { maxSessions?: number },
+  ): Promise<ExerciseHistory | null> {
+    const maxSessions = options?.maxSessions ?? 10;
+    const sessionsSnapshot = await getDocs(
+      query(
+        workoutSessionsCol(uid),
+        where('date', '<', excludeDate),
+        orderBy('date', 'desc'),
+        limit(maxSessions),
+      ),
+    );
+
+    if (sessionsSnapshot.empty) return null;
+
+    let maxWeightKg = 0;
+    let lastSetWeightKg: number | null = null;
+    let lastSessionDate: DateIso | null = null;
+    let sessionCount = 0;
+
+    for (const sessionDoc of sessionsSnapshot.docs) {
+      const exercisesSnapshot = await getDocs(
+        query(
+          sessionExercisesCol(uid, sessionDoc.id),
+          where('exerciseId', '==', exerciseId),
+        ),
+      );
+
+      if (exercisesSnapshot.empty) continue;
+
+      sessionCount += 1;
+      const sessionDate = sessionDoc.data()['date'] as DateIso;
+
+      for (const exerciseDoc of exercisesSnapshot.docs) {
+        const setsSnapshot = await getDocs(
+          query(sessionSetsCol(uid, sessionDoc.id, exerciseDoc.id), orderBy('order', 'asc')),
+        );
+
+        const sets = setsSnapshot.docs.map((s) => s.data() as SessionSet);
+        if (sets.length === 0) continue;
+
+        const sessionMax = Math.max(...sets.map((s) => s.weightKg));
+        if (sessionMax > maxWeightKg) maxWeightKg = sessionMax;
+
+        if (lastSessionDate === null) {
+          lastSessionDate = sessionDate;
+          lastSetWeightKg = sets[sets.length - 1]?.weightKg ?? 0;
+        }
+      }
+    }
+
+    if (lastSessionDate === null) return null;
+
+    return { maxWeightKg, lastSetWeightKg: lastSetWeightKg ?? 0, lastSessionDate, sessionCount };
   },
 };

@@ -10,11 +10,13 @@ import {
   Select,
 } from '../../shared/components'
 import {
+  getExerciseHistoryForWorkout,
   getRoutineDayTemplateDraft,
   getTodayWorkoutDraft,
   saveWorkout,
   type WorkoutDraft,
 } from './workout.data'
+import type { ExerciseHistory } from '../../shared/types/firestore'
 
 type WorkoutSet = {
   id: string
@@ -112,6 +114,7 @@ export const LogWorkoutPage = () => {
   const [hasOverrides, setHasOverrides] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [defaultExerciseNames, setDefaultExerciseNames] = useState<string[]>([])
+  const [exerciseHistories, setExerciseHistories] = useState<Record<string, ExerciseHistory | 'loading' | null>>({})
 
   useEffect(() => {
     const load = async () => {
@@ -296,6 +299,29 @@ export const LogWorkoutPage = () => {
     )
   }
 
+  const onExpandExercise = (exercise: WorkoutExercise) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === exercise.id ? { ...item, collapsed: !item.collapsed } : item,
+      ),
+    )
+
+    const isExpanding = exercise.collapsed
+    if (!isExpanding || !exercise.sourceExerciseId) return
+    if (exerciseHistories[exercise.sourceExerciseId] !== undefined) return
+
+    const { sourceExerciseId } = exercise
+    setExerciseHistories((prev) => ({ ...prev, [sourceExerciseId]: 'loading' }))
+
+    void getExerciseHistoryForWorkout(user!.uid, sourceExerciseId, context!.dateKey)
+      .then((history) => {
+        setExerciseHistories((prev) => ({ ...prev, [sourceExerciseId]: history }))
+      })
+      .catch(() => {
+        setExerciseHistories((prev) => ({ ...prev, [sourceExerciseId]: null }))
+      })
+  }
+
   const removeSet = (exerciseId: string, setId: string) => {
     setHasOverrides(true)
     setItems((prev) =>
@@ -446,13 +472,7 @@ export const LogWorkoutPage = () => {
             </div>
             <div className="flex gap-2">
               <Button
-                onClick={() => {
-                  setItems((prev) =>
-                    prev.map((item) =>
-                      item.id === exercise.id ? { ...item, collapsed: !item.collapsed } : item,
-                    ),
-                  )
-                }}
+                onClick={() => onExpandExercise(exercise)}
                 size="sm"
                 variant="ghost"
               >
@@ -466,6 +486,28 @@ export const LogWorkoutPage = () => {
 
           {!exercise.collapsed && (
             <>
+              {exercise.sourceExerciseId && (() => {
+                const history = exerciseHistories[exercise.sourceExerciseId]
+                if (history === 'loading') {
+                  return <p className="text-xs text-[var(--text-muted)] animate-pulse">Loading history...</p>
+                }
+                if (!history) return null
+                return (
+                  <div className="rounded-lg border border-[var(--border-muted)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text-muted)] space-y-0.5">
+                    <p>
+                      <span className="font-semibold text-[var(--text-strong)]">Last session:</span>{' '}
+                      {new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short' })
+                        .format(new Date(history.lastSessionDate + 'T12:00:00'))}{' '}
+                      — {history.lastSetWeightKg} kg (last set)
+                    </p>
+                    <p>
+                      <span className="font-semibold text-[var(--text-strong)]">Max recorded:</span>{' '}
+                      {history.maxWeightKg} kg
+                    </p>
+                  </div>
+                )
+              })()}
+
               <div className="grid grid-cols-[0.7fr_1fr_1fr_1fr_auto] gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                 <span>Set</span>
                 <span>Reps</span>

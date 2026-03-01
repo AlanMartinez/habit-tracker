@@ -146,3 +146,10 @@ export interface NewSessionSetInput {
   weightKg: number;
   rpe?: number;
 }
+
+export interface ExerciseHistory {
+  maxWeightKg: number;
+  lastSetWeightKg: number;
+  lastSessionDate: DateIso;
+  sessionCount: number;
+}
