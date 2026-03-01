@@ -1,5 +1,5 @@
 ﻿import { doc, getDoc } from 'firebase/firestore'
-import { exerciseStore, routineStore, workoutStore } from '../../firebase/firestore'
+import { exerciseMachineStore, exerciseStore, routineStore, workoutStore } from '../../firebase/firestore'
 import { db } from '../../firebase/firebase'
 import type {
   DateIso,
@@ -16,6 +16,8 @@ export type WorkoutDraftSet = {
   reps: number
   weightKg: number
   rpe?: number
+  machineId?: string
+  machineLabel?: string
 }
 
 export type WorkoutDraftExercise = {
@@ -27,6 +29,7 @@ export type WorkoutDraftExercise = {
   targetRepsMax?: number
   targetSets?: number
   sets: WorkoutDraftSet[]
+  availableMachines: Array<{ id: string; label: string }>
 }
 
 export type WorkoutDraft = {
@@ -59,6 +62,8 @@ export type SaveWorkoutInput = {
       reps: number
       weightKg: number
       rpe?: number
+      machineId?: string
+      machineLabel?: string
     }>
   }>
 }
@@ -106,6 +111,8 @@ const toDraftSet = (item: WithId<SessionSet>): WorkoutDraftSet => ({
   reps: item.reps,
   weightKg: item.weightKg,
   rpe: item.rpe,
+  machineId: item.machineId,
+  machineLabel: item.machineLabel,
 })
 
 export const getTodayWorkoutDraft = async (
@@ -164,12 +171,16 @@ export const getTodayWorkoutDraft = async (
     const exercises = await Promise.all(
       sessionExercises.map(async (item) => {
         const sets = await workoutStore.listSets(uid, existingSession.id, item.id)
+        const availableMachines = item.exerciseId
+          ? (await exerciseMachineStore.list(uid, item.exerciseId)).map((m) => ({ id: m.id, label: m.label }))
+          : []
         return {
           id: item.id,
           order: item.order,
           exerciseId: item.exerciseId,
           nameSnapshot: item.nameSnapshot,
           sets: sets.map(toDraftSet),
+          availableMachines,
         } satisfies WorkoutDraftExercise
       }),
     )
@@ -193,19 +204,25 @@ export const getTodayWorkoutDraft = async (
   const routineDayExercises = selectedDayId
     ? await routineStore.listDayExercises(uid, routine.id, selectedDayId)
     : []
-  const draftExercises = routineDayExercises.map((item) => {
-    const targetSets = item.targetSets ?? 1
-    return {
-      id: item.id,
-      order: item.order,
-      exerciseId: item.exerciseId,
-      nameSnapshot: item.nameSnapshot,
-      targetRepsMin: item.targetRepsMin,
-      targetRepsMax: item.targetRepsMax,
-      targetSets,
-      sets: Array.from({ length: targetSets }, (_, index) => toDefaultSet(index)),
-    }
-  })
+  const draftExercises = await Promise.all(
+    routineDayExercises.map(async (item) => {
+      const targetSets = item.targetSets ?? 1
+      const availableMachines = item.exerciseId
+        ? (await exerciseMachineStore.list(uid, item.exerciseId)).map((m) => ({ id: m.id, label: m.label }))
+        : []
+      return {
+        id: item.id,
+        order: item.order,
+        exerciseId: item.exerciseId,
+        nameSnapshot: item.nameSnapshot,
+        targetRepsMin: item.targetRepsMin,
+        targetRepsMax: item.targetRepsMax,
+        targetSets,
+        sets: Array.from({ length: targetSets }, (_, index) => toDefaultSet(index)),
+        availableMachines,
+      }
+    }),
+  )
 
   return {
     dateKey,
@@ -239,11 +256,12 @@ export const getRoutineDayTemplateDraft = async (
   }
 
   const dayExercises = await routineStore.listDayExercises(uid, routineId, routineDayId)
-  return {
-    routineDayId,
-    routineDayLabel: selectedDay.label,
-    exercises: dayExercises.map((item) => {
+  const exercises = await Promise.all(
+    dayExercises.map(async (item) => {
       const targetSets = item.targetSets ?? 1
+      const availableMachines = item.exerciseId
+        ? (await exerciseMachineStore.list(uid, item.exerciseId)).map((m) => ({ id: m.id, label: m.label }))
+        : []
       return {
         id: item.id,
         order: item.order,
@@ -253,8 +271,14 @@ export const getRoutineDayTemplateDraft = async (
         targetRepsMax: item.targetRepsMax,
         targetSets,
         sets: Array.from({ length: targetSets }, (_, index) => toDefaultSet(index)),
+        availableMachines,
       }
     }),
+  )
+  return {
+    routineDayId,
+    routineDayLabel: selectedDay.label,
+    exercises,
   }
 }
 
@@ -313,6 +337,8 @@ export const saveWorkout = async (uid: string, payload: SaveWorkoutInput): Promi
         reps: set.reps,
         weightKg: set.weightKg,
         rpe: set.rpe,
+        machineId: set.machineId,
+        machineLabel: set.machineLabel,
       })
     }
   }

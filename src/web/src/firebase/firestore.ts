@@ -19,7 +19,9 @@ import {
 import type {
   DateIso,
   Exercise,
+  ExerciseMachine,
   NewExerciseInput,
+  NewExerciseMachineInput,
   NewRoutineDayExerciseInput,
   NewRoutineDayInput,
   NewRoutineInput,
@@ -113,6 +115,8 @@ const upsertOwnedDoc = async (
 };
 
 const exercisesCol = (uid: string) => collection(db, 'users', uid, 'exercises');
+const exerciseMachinesCol = (uid: string, exerciseId: string) =>
+  collection(db, 'users', uid, 'exercises', exerciseId, 'machines');
 const routinesCol = (uid: string) => collection(db, 'users', uid, 'routines');
 const routineDaysCol = (uid: string, routineId: string) =>
   collection(db, 'users', uid, 'routines', routineId, 'days');
@@ -172,6 +176,49 @@ export const exerciseStore = {
 
   async remove(uid: string, exerciseId: string): Promise<void> {
     await deleteDoc(doc(db, 'users', uid, 'exercises', exerciseId));
+  },
+};
+
+export const exerciseMachineStore = {
+  async list(uid: string, exerciseId: string): Promise<Array<WithId<ExerciseMachine>>> {
+    const snapshot = await getDocs(
+      query(exerciseMachinesCol(uid, exerciseId), orderBy('label', 'asc')),
+    );
+    return snapshot.docs.map((item) => withId<ExerciseMachine>(item.id, item.data()));
+  },
+
+  async create(uid: string, exerciseId: string, payload: NewExerciseMachineInput): Promise<string> {
+    const reference = doc(exerciseMachinesCol(uid, exerciseId));
+    await setDoc(reference, {
+      ownerUid: uid,
+      label: toRequiredString(payload.label, 'Machine label'),
+      notes: toOptionalString(payload.notes),
+      ...stampForCreate(),
+    });
+    return reference.id;
+  },
+
+  async update(
+    uid: string,
+    exerciseId: string,
+    machineId: string,
+    payload: Partial<NewExerciseMachineInput>,
+  ): Promise<void> {
+    const updates: Record<string, unknown> = { ...stampForUpdate() };
+    if (payload.label !== undefined) {
+      updates.label = toRequiredString(payload.label, 'Machine label');
+    }
+    if (payload.notes !== undefined) {
+      updates.notes = toOptionalString(payload.notes);
+    }
+    await updateDoc(
+      doc(db, 'users', uid, 'exercises', exerciseId, 'machines', machineId),
+      updates,
+    );
+  },
+
+  async remove(uid: string, exerciseId: string, machineId: string): Promise<void> {
+    await deleteDoc(doc(db, 'users', uid, 'exercises', exerciseId, 'machines', machineId));
   },
 };
 
@@ -462,6 +509,8 @@ export const workoutStore = {
         reps: payload.reps,
         weightKg: payload.weightKg,
         rpe: payload.rpe,
+        machineId: payload.machineId,
+        machineLabel: payload.machineLabel,
       },
     );
   },

@@ -21,6 +21,8 @@ type WorkoutSet = {
   reps: string
   kg: string
   rir: string
+  machineId?: string
+  machineLabel?: string
 }
 
 type WorkoutExercise = {
@@ -29,6 +31,7 @@ type WorkoutExercise = {
   name: string
   collapsed: boolean
   sets: WorkoutSet[]
+  availableMachines: Array<{ id: string; label: string }>
 }
 
 const toId = (): string =>
@@ -72,12 +75,15 @@ const mapDraftToExercise = (item: WorkoutDraft['exercises'][number]): WorkoutExe
   sourceExerciseId: item.exerciseId,
   name: item.nameSnapshot,
   collapsed: true,
+  availableMachines: item.availableMachines,
   sets: item.sets.length > 0
     ? item.sets.map((set) => ({
         id: set.id,
         reps: set.reps > 1 ? String(set.reps) : '',
         kg: set.weightKg > 0 ? String(set.weightKg) : '',
         rir: (set.rpe ?? 1) > 1 ? String(set.rpe ?? 1) : '',
+        machineId: set.machineId,
+        machineLabel: set.machineLabel,
       }))
     : [createSet()],
 })
@@ -184,6 +190,7 @@ export const LogWorkoutPage = () => {
         sourceExerciseId: selectedExerciseItem.id,
         name: selectedExerciseItem.name,
         collapsed: false,
+        availableMachines: [],
         sets: [createSet()],
       },
     ])
@@ -254,6 +261,29 @@ export const LogWorkoutPage = () => {
         return {
           ...item,
           sets: nextSets,
+        }
+      }),
+    )
+  }
+
+  const updateSetMachine = (
+    exerciseId: string,
+    setId: string,
+    machineId: string,
+    machines: Array<{ id: string; label: string }>,
+  ) => {
+    const machine = machines.find((m) => m.id === machineId)
+    setHasOverrides(true)
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== exerciseId) return item
+        return {
+          ...item,
+          sets: item.sets.map((set) =>
+            set.id === setId
+              ? { ...set, machineId: machine?.id, machineLabel: machine?.label }
+              : set,
+          ),
         }
       }),
     )
@@ -336,6 +366,8 @@ export const LogWorkoutPage = () => {
             reps: parsePositiveNumber(set.reps, 1),
             weightKg: parseNonNegativeNumber(set.kg),
             rpe: parsePositiveNumber(set.rir, 1),
+            machineId: set.machineId,
+            machineLabel: set.machineLabel,
           })),
         })),
       })
@@ -475,7 +507,8 @@ export const LogWorkoutPage = () => {
               </div>
 
               {exercise.sets.map((set, setIndex) => (
-                <div className="grid grid-cols-[0.7fr_1fr_1fr_1fr_auto] gap-2" key={set.id}>
+                <div className="space-y-1.5" key={set.id}>
+                <div className="grid grid-cols-[0.7fr_1fr_1fr_1fr_auto] gap-2">
                   <div className="flex min-h-11 items-center rounded-lg border border-[var(--border-muted)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text)]">
                     {setIndex + 1}
                   </div>
@@ -521,6 +554,19 @@ export const LogWorkoutPage = () => {
                   >
                     ✕
                   </Button>
+                </div>
+                {exercise.availableMachines.length > 0 && (
+                  <Select
+                    id={`machine-${set.id}`}
+                    label={`Machine (set ${setIndex + 1})`}
+                    onChange={(e) => updateSetMachine(exercise.id, set.id, e.target.value, exercise.availableMachines)}
+                    options={[
+                      { label: '—', value: '' },
+                      ...exercise.availableMachines.map((m) => ({ label: m.label, value: m.id })),
+                    ]}
+                    value={set.machineId ?? ''}
+                  />
+                )}
                 </div>
               ))}
 
