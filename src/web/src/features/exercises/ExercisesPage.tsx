@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../app/providers/useAuth'
 import type { Exercise, WithId } from '../../shared/types/firestore'
 import {
+  Alert,
   AppShell,
   Button,
   Card,
@@ -152,7 +153,7 @@ export const ExercisesPage = () => {
         value={search}
       />
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <Alert onDismiss={() => setError(null)}>{error}</Alert>}
       {isLoading && <Skeleton variant="card" />}
 
       {!isLoading && filtered.length === 0 && (

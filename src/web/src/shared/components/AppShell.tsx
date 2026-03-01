@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { BottomNav } from './BottomNav'
 import { Button } from './Button'
 import { TopBar } from './TopBar'
-import { IconMoon, IconSparkles, IconSun } from './icons'
+import { IconMoon, IconSun } from './icons'
 
 type AppShellProps = {
   title: string
@@ -69,10 +69,6 @@ export const AppShell = ({
         title={title}
       />
       <main className="mx-auto w-full max-w-3xl space-y-4 px-4 py-4">
-        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-1)] px-2.5 py-1 text-xs font-semibold text-[var(--text-muted)]">
-          <IconSparkles className="h-3.5 w-3.5" />
-          Focus mode
-        </div>
         {children}
       </main>
       {withNav && <BottomNav />}

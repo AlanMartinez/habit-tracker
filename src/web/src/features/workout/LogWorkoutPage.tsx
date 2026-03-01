@@ -2,11 +2,11 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/providers/useAuth'
 import {
+  Alert,
   AppShell,
   Button,
   Card,
   EmptyState,
-  Input,
   Select,
 } from '../../shared/components'
 import {
@@ -350,7 +350,7 @@ export const LogWorkoutPage = () => {
 
   if (isLoading) {
     return (
-      <AppShell onBack={() => navigate('/app/workout')} title="Log workout">
+      <AppShell onBack={() => navigate('/app/workout')} title="Log workout" withNav={false}>
         <p className="text-sm text-[var(--text-muted)]">Loading workout...</p>
       </AppShell>
     )
@@ -358,7 +358,7 @@ export const LogWorkoutPage = () => {
 
   if (!context) {
     return (
-      <AppShell onBack={() => navigate('/app/workout')} title="Log workout">
+      <AppShell onBack={() => navigate('/app/workout')} title="Log workout" withNav={false}>
         <EmptyState
           action={<Button onClick={() => navigate('/app/workout')}>Back to dashboard</Button>}
           description="Workout context is unavailable."
@@ -373,8 +373,9 @@ export const LogWorkoutPage = () => {
       onBack={() => navigate('/app/workout')}
       subtitle={context.routineName ?? 'No active routine'}
       title={context.routineDayLabel ? `Log: ${context.routineDayLabel}` : 'Log workout'}
+      withNav={false}
     >
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <Alert onDismiss={() => setError(null)}>{error}</Alert>}
 
       <details className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-1)] p-4">
         <summary className="cursor-pointer text-sm font-semibold text-[var(--text-strong)]">
@@ -466,61 +467,60 @@ export const LogWorkoutPage = () => {
 
           {!exercise.collapsed && (
             <>
-              <div className="grid grid-cols-[0.7fr_1fr_1fr_1fr_auto] gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                <span>Set</span>
+              <div className="grid grid-cols-[2rem_1fr_1fr_1fr_2.5rem] gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                <span className="text-center">#</span>
                 <span>Reps</span>
                 <span>Kg</span>
                 <span>RIR</span>
-                <span>Del</span>
+                <span />
               </div>
 
               {exercise.sets.map((set, setIndex) => (
-                <div className="grid grid-cols-[0.7fr_1fr_1fr_1fr_auto] gap-2" key={set.id}>
-                  <div className="flex min-h-11 items-center rounded-lg border border-[var(--border-muted)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text)]">
+                <div className="grid grid-cols-[2rem_1fr_1fr_1fr_2.5rem] items-center gap-2" key={set.id}>
+                  <div className="flex min-h-[44px] items-center justify-center rounded-lg border border-[var(--border-muted)] bg-[var(--surface-2)] text-sm text-[var(--text)]">
                     {setIndex + 1}
                   </div>
-                  <Input
-                    id={`reps-${set.id}`}
+                  <input
+                    aria-label={`Set ${setIndex + 1} reps for ${exercise.name}`}
+                    className="min-h-[44px] w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-2 text-center text-sm text-[var(--text-strong)] outline-none focus-visible:border-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-soft)]"
                     inputMode="numeric"
-                    label="Reps"
-                    onChange={(event) =>
-                      updateSet(exercise.id, set.id, 'reps', event.target.value)
-                    }
+                    onChange={(e) => updateSet(exercise.id, set.id, 'reps', e.target.value)}
                     onFocus={() => clearSetDefaultOnFocus(exercise.id, set.id, 'reps')}
                     pattern="[0-9]*"
-                    placeholder="1"
+                    placeholder="–"
                     type="number"
                     value={set.reps}
                   />
-                  <Input
-                    id={`kg-${set.id}`}
+                  <input
+                    aria-label={`Set ${setIndex + 1} kg for ${exercise.name}`}
+                    className="min-h-[44px] w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-2 text-center text-sm text-[var(--text-strong)] outline-none focus-visible:border-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-soft)]"
                     inputMode="decimal"
-                    label="Kg"
-                    onChange={(event) => updateSet(exercise.id, set.id, 'kg', event.target.value)}
+                    onChange={(e) => updateSet(exercise.id, set.id, 'kg', e.target.value)}
                     onFocus={() => clearSetDefaultOnFocus(exercise.id, set.id, 'kg')}
-                    placeholder="0"
+                    placeholder="–"
                     step="0.5"
                     type="number"
                     value={set.kg}
                   />
-                  <Input
-                    id={`rir-${set.id}`}
+                  <input
+                    aria-label={`Set ${setIndex + 1} RIR for ${exercise.name}`}
+                    className="min-h-[44px] w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-2 text-center text-sm text-[var(--text-strong)] outline-none focus-visible:border-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-soft)]"
                     inputMode="numeric"
-                    label="RIR"
-                    onChange={(event) => updateSet(exercise.id, set.id, 'rir', event.target.value)}
+                    onChange={(e) => updateSet(exercise.id, set.id, 'rir', e.target.value)}
                     onFocus={() => clearSetDefaultOnFocus(exercise.id, set.id, 'rir')}
                     pattern="[0-9]*"
-                    placeholder="1"
+                    placeholder="–"
                     type="number"
                     value={set.rir}
                   />
-                  <Button
+                  <button
+                    aria-label={`Remove set ${setIndex + 1}`}
+                    className="flex min-h-[44px] min-w-[40px] items-center justify-center rounded-2xl text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-red-500"
                     onClick={() => removeSet(exercise.id, set.id)}
-                    size="sm"
-                    variant="ghost"
+                    type="button"
                   >
                     ✕
-                  </Button>
+                  </button>
                 </div>
               ))}
 

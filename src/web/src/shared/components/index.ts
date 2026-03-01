@@ -1,3 +1,4 @@
+export { Alert } from './Alert'
 export { AppShell } from './AppShell'
 export { Badge } from './Badge'
 export { BottomNav } from './BottomNav'

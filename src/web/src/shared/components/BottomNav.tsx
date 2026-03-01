@@ -33,16 +33,20 @@ export const BottomNav = ({ items = defaultItems }: BottomNavProps) => (
             <NavLink
               className={({ isActive }) =>
                 cn(
-                  'flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-2xl px-2 text-[11px] font-semibold transition',
+                  'flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-2xl px-2 text-[11px] font-semibold transition-all duration-150',
                   isActive
-                    ? 'bg-[var(--accent-soft)] text-[var(--accent-text)]'
+                    ? 'bg-[var(--accent-soft)] text-[var(--accent-text)] scale-[1.04]'
                     : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]',
                 )
               }
               to={item.to}
             >
-              <Icon className="h-4 w-4" />
-              {item.label}
+              {({ isActive }) => (
+                <>
+                  <Icon className={cn('transition-all duration-150', isActive ? 'h-5 w-5' : 'h-4 w-4')} />
+                  {item.label}
+                </>
+              )}
             </NavLink>
           </li>
         )
