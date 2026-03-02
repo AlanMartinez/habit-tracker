@@ -11,12 +11,14 @@ import {
 } from '../../shared/components'
 import { cn } from '../../shared/lib/cn'
 import {
+  getExerciseHistoryForWorkout,
   getExerciseMachines,
   getRoutineDayTemplateDraft,
   getTodayWorkoutDraft,
   saveWorkout,
   type WorkoutDraft,
 } from './workout.data'
+import type { ExerciseHistory } from '../../shared/types/firestore'
 
 type WorkoutSet = {
   id: string
@@ -125,6 +127,7 @@ export const LogWorkoutPage = () => {
   const [hasOverrides, setHasOverrides] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [defaultExerciseNames, setDefaultExerciseNames] = useState<string[]>([])
+  const [exerciseHistories, setExerciseHistories] = useState<Record<string, ExerciseHistory | 'loading' | null>>({})
 
   useEffect(() => {
     const load = async () => {
@@ -336,6 +339,29 @@ export const LogWorkoutPage = () => {
     )
   }
 
+  const onExpandExercise = (exercise: WorkoutExercise) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === exercise.id ? { ...item, collapsed: !item.collapsed } : item,
+      ),
+    )
+
+    const isExpanding = exercise.collapsed
+    if (!isExpanding || !exercise.sourceExerciseId) return
+    if (exerciseHistories[exercise.sourceExerciseId] !== undefined) return
+
+    const { sourceExerciseId } = exercise
+    setExerciseHistories((prev) => ({ ...prev, [sourceExerciseId]: 'loading' }))
+
+    void getExerciseHistoryForWorkout(user!.uid, sourceExerciseId, context!.dateKey)
+      .then((history) => {
+        setExerciseHistories((prev) => ({ ...prev, [sourceExerciseId]: history }))
+      })
+      .catch(() => {
+        setExerciseHistories((prev) => ({ ...prev, [sourceExerciseId]: null }))
+      })
+  }
+
   const removeSet = (exerciseId: string, setId: string) => {
     setHasOverrides(true)
     setItems((prev) =>
@@ -507,13 +533,7 @@ export const LogWorkoutPage = () => {
             </div>
             <div className="flex shrink-0 gap-2">
               <Button
-                onClick={() => {
-                  setItems((prev) =>
-                    prev.map((item) =>
-                      item.id === exercise.id ? { ...item, collapsed: !item.collapsed } : item,
-                    ),
-                  )
-                }}
+                onClick={() => onExpandExercise(exercise)}
                 size="sm"
                 variant="ghost"
               >
@@ -527,6 +547,20 @@ export const LogWorkoutPage = () => {
 
           {!exercise.collapsed && (
             <>
+              {exercise.sourceExerciseId && (() => {
+                const history = exerciseHistories[exercise.sourceExerciseId]
+                if (history === 'loading') {
+                  return <p className="text-xs text-[var(--text-muted)] animate-pulse">Loading history...</p>
+                }
+                if (!history) return null
+                return (
+                  <p className="text-xs text-[var(--text-muted)]">
+                    <span className="font-semibold text-[var(--text-strong)]">Last session:</span>{' '}
+                    {history.lastSessionSets.map((s) => `${s.reps} x ${s.weightKg}kg`).join(' / ')}
+                  </p>
+                )
+              })()}
+
               <div className="grid grid-cols-[0.7fr_1fr_1fr_1fr_auto] gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                 <span>Set</span>
                 <span>Reps</span>

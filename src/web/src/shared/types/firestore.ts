@@ -165,3 +165,10 @@ export interface NewSessionSetInput {
   machineId?: string;
   machineLabel?: string;
 }
+
+export interface ExerciseHistory {
+  maxWeightKg: number;
+  lastSessionSets: Array<{ reps: number; weightKg: number }>;
+  lastSessionDate: DateIso;
+  sessionCount: number;
+}
