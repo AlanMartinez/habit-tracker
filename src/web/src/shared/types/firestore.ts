@@ -149,7 +149,7 @@ export interface NewSessionSetInput {
 
 export interface ExerciseHistory {
   maxWeightKg: number;
-  lastSetWeightKg: number;
+  lastSessionSets: Array<{ reps: number; weightKg: number }>;
   lastSessionDate: DateIso;
   sessionCount: number;
 }

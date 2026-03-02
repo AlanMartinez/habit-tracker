@@ -497,7 +497,7 @@ export const workoutStore = {
     if (sessionsSnapshot.empty) return null;
 
     let maxWeightKg = 0;
-    let lastSetWeightKg: number | null = null;
+    let lastSessionSets: Array<{ reps: number; weightKg: number }> | null = null;
     let lastSessionDate: DateIso | null = null;
     let sessionCount = 0;
 
@@ -527,13 +527,13 @@ export const workoutStore = {
 
         if (lastSessionDate === null) {
           lastSessionDate = sessionDate;
-          lastSetWeightKg = sets[sets.length - 1]?.weightKg ?? 0;
+          lastSessionSets = sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg }));
         }
       }
     }
 
     if (lastSessionDate === null) return null;
 
-    return { maxWeightKg, lastSetWeightKg: lastSetWeightKg ?? 0, lastSessionDate, sessionCount };
+    return { maxWeightKg, lastSessionSets: lastSessionSets ?? [], lastSessionDate, sessionCount };
   },
 };

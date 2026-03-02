@@ -493,18 +493,10 @@ export const LogWorkoutPage = () => {
                 }
                 if (!history) return null
                 return (
-                  <div className="rounded-lg border border-[var(--border-muted)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text-muted)] space-y-0.5">
-                    <p>
-                      <span className="font-semibold text-[var(--text-strong)]">Last session:</span>{' '}
-                      {new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short' })
-                        .format(new Date(history.lastSessionDate + 'T12:00:00'))}{' '}
-                      — {history.lastSetWeightKg} kg (last set)
-                    </p>
-                    <p>
-                      <span className="font-semibold text-[var(--text-strong)]">Max recorded:</span>{' '}
-                      {history.maxWeightKg} kg
-                    </p>
-                  </div>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    <span className="font-semibold text-[var(--text-strong)]">Last session:</span>{' '}
+                    {history.lastSessionSets.map((s) => `${s.reps} x ${s.weightKg}kg`).join(' / ')}
+                  </p>
                 )
               })()}
 
