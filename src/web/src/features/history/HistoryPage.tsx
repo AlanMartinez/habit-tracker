@@ -199,7 +199,8 @@ export const HistoryPage = () => {
                   {exercise.sets
                     .map((set) => {
                       const rirSuffix = set.rpe === undefined ? '' : ` RIR ${set.rpe}`
-                      return `${set.reps} x ${set.weightKg}kg${rirSuffix}`
+                      const machineSuffix = set.machineLabel ? ` [${set.machineLabel}]` : ''
+                      return `${set.reps} x ${set.weightKg}kg${rirSuffix}${machineSuffix}`
                     })
                     .join(', ')}
                 </p>
