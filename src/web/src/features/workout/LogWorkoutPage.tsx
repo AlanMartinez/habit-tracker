@@ -9,7 +9,9 @@ import {
   Input,
   Select,
 } from '../../shared/components'
+import { cn } from '../../shared/lib/cn'
 import {
+  getExerciseMachines,
   getRoutineDayTemplateDraft,
   getTodayWorkoutDraft,
   saveWorkout,
@@ -38,11 +40,13 @@ const toId = (): string =>
   globalThis.crypto?.randomUUID?.() ??
   `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 
-const createSet = (): WorkoutSet => ({
+const createSet = (defaultMachine?: { id: string; label: string }): WorkoutSet => ({
   id: toId(),
   reps: '',
   kg: '',
   rir: '',
+  machineId: defaultMachine?.id,
+  machineLabel: defaultMachine?.label,
 })
 
 const reorderItems = <T,>(items: T[], fromIndex: number, toIndex: number): T[] => {
@@ -70,23 +74,26 @@ const toDecimalText = (value: string): string => {
   return `${integerPart}.${decimals.join('')}`
 }
 
-const mapDraftToExercise = (item: WorkoutDraft['exercises'][number]): WorkoutExercise => ({
-  id: item.id,
-  sourceExerciseId: item.exerciseId,
-  name: item.nameSnapshot,
-  collapsed: true,
-  availableMachines: item.availableMachines,
-  sets: item.sets.length > 0
-    ? item.sets.map((set) => ({
-        id: set.id,
-        reps: set.reps > 1 ? String(set.reps) : '',
-        kg: set.weightKg > 0 ? String(set.weightKg) : '',
-        rir: (set.rpe ?? 1) > 1 ? String(set.rpe ?? 1) : '',
-        machineId: set.machineId,
-        machineLabel: set.machineLabel,
-      }))
-    : [createSet()],
-})
+const mapDraftToExercise = (item: WorkoutDraft['exercises'][number]): WorkoutExercise => {
+  const defaultMachine = item.availableMachines[0]
+  return {
+    id: item.id,
+    sourceExerciseId: item.exerciseId,
+    name: item.nameSnapshot,
+    collapsed: true,
+    availableMachines: item.availableMachines,
+    sets: item.sets.length > 0
+      ? item.sets.map((set) => ({
+          id: set.id,
+          reps: set.reps > 1 ? String(set.reps) : '',
+          kg: set.weightKg > 0 ? String(set.weightKg) : '',
+          rir: (set.rpe ?? 1) > 1 ? String(set.rpe ?? 1) : '',
+          machineId: set.machineId ?? defaultMachine?.id,
+          machineLabel: set.machineLabel ?? defaultMachine?.label,
+        }))
+      : [createSet(defaultMachine)],
+  }
+}
 
 const parseNonNegativeNumber = (value: string): number => {
   const trimmed = value.trim()
@@ -177,10 +184,13 @@ export const LogWorkoutPage = () => {
     [context, selectedExercise],
   )
 
-  const addAdHocExercise = () => {
-    if (!selectedExerciseItem) {
+  const addAdHocExercise = async () => {
+    if (!selectedExerciseItem || !user) {
       return
     }
+
+    const availableMachines = await getExerciseMachines(user.uid, selectedExerciseItem.id)
+    const defaultMachine = availableMachines[0]
 
     setHasOverrides(true)
     setItems((prev) => [
@@ -190,8 +200,8 @@ export const LogWorkoutPage = () => {
         sourceExerciseId: selectedExerciseItem.id,
         name: selectedExerciseItem.name,
         collapsed: false,
-        availableMachines: [],
-        sets: [createSet()],
+        availableMachines,
+        sets: [createSet(defaultMachine)],
       },
     ])
   }
@@ -210,12 +220,13 @@ export const LogWorkoutPage = () => {
         }
 
         const firstSet = item.sets[0]
+        const defaultMachine = item.availableMachines[0]
         return {
           ...item,
           sets: [
             ...item.sets,
             {
-              ...createSet(),
+              ...createSet(defaultMachine),
               kg: firstSet?.kg ?? '',
               rir: firstSet?.rir || '1',
             },
@@ -266,9 +277,8 @@ export const LogWorkoutPage = () => {
     )
   }
 
-  const updateSetMachine = (
+  const updateExerciseMachine = (
     exerciseId: string,
-    setId: string,
     machineId: string,
     machines: Array<{ id: string; label: string }>,
   ) => {
@@ -279,11 +289,11 @@ export const LogWorkoutPage = () => {
         if (item.id !== exerciseId) return item
         return {
           ...item,
-          sets: item.sets.map((set) =>
-            set.id === setId
-              ? { ...set, machineId: machine?.id, machineLabel: machine?.label }
-              : set,
-          ),
+          sets: item.sets.map((set) => ({
+            ...set,
+            machineId: machine?.id,
+            machineLabel: machine?.label,
+          })),
         }
       }),
     )
@@ -432,7 +442,7 @@ export const LogWorkoutPage = () => {
             }))}
             value={selectedExercise}
           />
-          <Button onClick={addAdHocExercise} variant="secondary">
+          <Button onClick={() => void addAdHocExercise()} variant="secondary">
             Add exercise
           </Button>
         </Card>
@@ -440,7 +450,7 @@ export const LogWorkoutPage = () => {
 
       {items.length === 0 && (
         <EmptyState
-          action={<Button onClick={addAdHocExercise}>Add exercise</Button>}
+          action={<Button onClick={() => void addAdHocExercise()}>Add exercise</Button>}
           description="No exercise loaded for this session."
           title="No exercises"
         />
@@ -470,13 +480,32 @@ export const LogWorkoutPage = () => {
             setDraggingExerciseId(null)
           }}
         >
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold text-[var(--text-strong)]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
+              <h2 className="shrink-0 text-base font-semibold text-[var(--text-strong)]">
                 {index + 1}. {exercise.name}
               </h2>
+              {exercise.availableMachines.map((machine) => {
+                const isSelected = exercise.sets[0]?.machineId === machine.id
+                return (
+                  <button
+                    className={cn(
+                      'rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors',
+                      isSelected
+                        ? 'bg-[var(--accent)] text-[var(--accent-contrast)]'
+                        : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--text)]',
+                    )}
+                    key={machine.id}
+                    onClick={() =>
+                      updateExerciseMachine(exercise.id, machine.id, exercise.availableMachines)
+                    }
+                  >
+                    {machine.label}
+                  </button>
+                )
+              })}
             </div>
-            <div className="flex gap-2">
+            <div className="flex shrink-0 gap-2">
               <Button
                 onClick={() => {
                   setItems((prev) =>
@@ -507,8 +536,7 @@ export const LogWorkoutPage = () => {
               </div>
 
               {exercise.sets.map((set, setIndex) => (
-                <div className="space-y-1.5" key={set.id}>
-                <div className="grid grid-cols-[0.7fr_1fr_1fr_1fr_auto] gap-2">
+                <div className="grid grid-cols-[0.7fr_1fr_1fr_1fr_auto] gap-2" key={set.id}>
                   <div className="flex min-h-11 items-center rounded-lg border border-[var(--border-muted)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text)]">
                     {setIndex + 1}
                   </div>
@@ -554,19 +582,6 @@ export const LogWorkoutPage = () => {
                   >
                     ✕
                   </Button>
-                </div>
-                {exercise.availableMachines.length > 0 && (
-                  <Select
-                    id={`machine-${set.id}`}
-                    label={`Machine (set ${setIndex + 1})`}
-                    onChange={(e) => updateSetMachine(exercise.id, set.id, e.target.value, exercise.availableMachines)}
-                    options={[
-                      { label: '—', value: '' },
-                      ...exercise.availableMachines.map((m) => ({ label: m.label, value: m.id })),
-                    ]}
-                    value={set.machineId ?? ''}
-                  />
-                )}
                 </div>
               ))}
 

@@ -282,6 +282,14 @@ export const getRoutineDayTemplateDraft = async (
   }
 }
 
+export const getExerciseMachines = async (
+  uid: string,
+  exerciseId: string,
+): Promise<Array<{ id: string; label: string }>> => {
+  const machines = await exerciseMachineStore.list(uid, exerciseId)
+  return machines.map((m) => ({ id: m.id, label: m.label }))
+}
+
 export const saveWorkout = async (uid: string, payload: SaveWorkoutInput): Promise<void> => {
   if (!DATE_KEY_PATTERN.test(payload.dateKey)) {
     throw new Error('Date key must be YYYY-MM-DD.')

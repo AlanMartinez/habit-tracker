@@ -182,19 +182,20 @@ export const exerciseStore = {
 export const exerciseMachineStore = {
   async list(uid: string, exerciseId: string): Promise<Array<WithId<ExerciseMachine>>> {
     const snapshot = await getDocs(
-      query(exerciseMachinesCol(uid, exerciseId), orderBy('label', 'asc')),
+      query(exerciseMachinesCol(uid, exerciseId), orderBy('order', 'asc')),
     );
     return snapshot.docs.map((item) => withId<ExerciseMachine>(item.id, item.data()));
   },
 
   async create(uid: string, exerciseId: string, payload: NewExerciseMachineInput): Promise<string> {
     const reference = doc(exerciseMachinesCol(uid, exerciseId));
-    await setDoc(reference, {
+    await setDoc(reference, stripUndefined({
       ownerUid: uid,
       label: toRequiredString(payload.label, 'Machine label'),
+      order: payload.order,
       notes: toOptionalString(payload.notes),
       ...stampForCreate(),
-    });
+    }));
     return reference.id;
   },
 
@@ -210,6 +211,9 @@ export const exerciseMachineStore = {
     }
     if (payload.notes !== undefined) {
       updates.notes = toOptionalString(payload.notes);
+    }
+    if (payload.order !== undefined) {
+      updates.order = payload.order;
     }
     await updateDoc(
       doc(db, 'users', uid, 'exercises', exerciseId, 'machines', machineId),

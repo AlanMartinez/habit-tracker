@@ -133,6 +133,7 @@ export interface NewSessionExerciseInput {
 export interface ExerciseMachine {
   ownerUid: string;
   label: string;
+  order: number;
   notes?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -140,6 +141,7 @@ export interface ExerciseMachine {
 
 export interface NewExerciseMachineInput {
   label: string;
+  order: number;
   notes?: string;
 }
 
