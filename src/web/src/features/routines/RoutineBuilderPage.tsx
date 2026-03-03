@@ -43,6 +43,7 @@ export const RoutineBuilderPage = () => {
   const [days, setDays] = useState<RoutineDayWithExercises[]>([])
   const [activeDayId, setActiveDayId] = useState('')
   const [dayNameDrafts, setDayNameDrafts] = useState<Record<string, string>>({})
+  const [editingDayId, setEditingDayId] = useState<string | null>(null)
   const [draggingExerciseId, setDraggingExerciseId] = useState<string | null>(null)
   const [exerciseSearch, setExerciseSearch] = useState('')
   const [availableExercises, setAvailableExercises] = useState<Array<WithId<Exercise>>>([])
@@ -238,40 +239,48 @@ export const RoutineBuilderPage = () => {
 
       <Card className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
-          Day Names
-        </h2>
-        <div className="grid gap-2 md:grid-cols-2">
-          {days.map((day, index) => (
-            <Input
-              id={`day-name-${day.id}`}
-              key={day.id}
-              label={`Day ${index + 1}`}
-              onBlur={() => void onRenameDay(day.id)}
-              onChange={(event) =>
-                setDayNameDrafts((prev) => ({ ...prev, [day.id]: event.target.value }))
-              }
-              placeholder={`Day ${index + 1}`}
-              value={dayNameDrafts[day.id] ?? ''}
-            />
-          ))}
-        </div>
-      </Card>
-
-      <Card className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
           Weekly Days
         </h2>
         <div className="flex flex-wrap gap-2">
-          {days.map((day) => (
-            <Button
-              key={day.id}
-              onClick={() => setActiveDayId(day.id)}
-              size="sm"
-              variant={selectedDay?.id === day.id ? 'primary' : 'secondary'}
-            >
-              {day.label || 'Unnamed day'}
-            </Button>
-          ))}
+          {days.map((day) =>
+            editingDayId === day.id ? (
+              <input
+                key={day.id}
+                autoFocus
+                className="h-10 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-3.5 text-sm font-semibold text-[var(--text-strong)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                onBlur={() => {
+                  void onRenameDay(day.id)
+                  setEditingDayId(null)
+                }}
+                onChange={(event) =>
+                  setDayNameDrafts((prev) => ({ ...prev, [day.id]: event.target.value }))
+                }
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    void onRenameDay(day.id)
+                    setEditingDayId(null)
+                  }
+                  if (event.key === 'Escape') {
+                    setEditingDayId(null)
+                  }
+                }}
+                value={dayNameDrafts[day.id] ?? ''}
+              />
+            ) : (
+              <Button
+                key={day.id}
+                onClick={() => setActiveDayId(day.id)}
+                onDoubleClick={() => {
+                  setActiveDayId(day.id)
+                  setEditingDayId(day.id)
+                }}
+                size="sm"
+                variant={selectedDay?.id === day.id ? 'primary' : 'secondary'}
+              >
+                {day.label || 'Unnamed day'}
+              </Button>
+            ),
+          )}
         </div>
       </Card>
 
