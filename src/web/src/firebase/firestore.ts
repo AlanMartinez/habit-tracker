@@ -19,7 +19,10 @@ import {
 import type {
   DateIso,
   Exercise,
+  ExerciseHistory,
+  ExerciseMachine,
   NewExerciseInput,
+  NewExerciseMachineInput,
   NewRoutineDayExerciseInput,
   NewRoutineDayInput,
   NewRoutineInput,
@@ -113,6 +116,8 @@ const upsertOwnedDoc = async (
 };
 
 const exercisesCol = (uid: string) => collection(db, 'users', uid, 'exercises');
+const exerciseMachinesCol = (uid: string, exerciseId: string) =>
+  collection(db, 'users', uid, 'exercises', exerciseId, 'machines');
 const routinesCol = (uid: string) => collection(db, 'users', uid, 'routines');
 const routineDaysCol = (uid: string, routineId: string) =>
   collection(db, 'users', uid, 'routines', routineId, 'days');
@@ -172,6 +177,53 @@ export const exerciseStore = {
 
   async remove(uid: string, exerciseId: string): Promise<void> {
     await deleteDoc(doc(db, 'users', uid, 'exercises', exerciseId));
+  },
+};
+
+export const exerciseMachineStore = {
+  async list(uid: string, exerciseId: string): Promise<Array<WithId<ExerciseMachine>>> {
+    const snapshot = await getDocs(
+      query(exerciseMachinesCol(uid, exerciseId), orderBy('order', 'asc')),
+    );
+    return snapshot.docs.map((item) => withId<ExerciseMachine>(item.id, item.data()));
+  },
+
+  async create(uid: string, exerciseId: string, payload: NewExerciseMachineInput): Promise<string> {
+    const reference = doc(exerciseMachinesCol(uid, exerciseId));
+    await setDoc(reference, stripUndefined({
+      ownerUid: uid,
+      label: toRequiredString(payload.label, 'Machine label'),
+      order: payload.order,
+      notes: toOptionalString(payload.notes),
+      ...stampForCreate(),
+    }));
+    return reference.id;
+  },
+
+  async update(
+    uid: string,
+    exerciseId: string,
+    machineId: string,
+    payload: Partial<NewExerciseMachineInput>,
+  ): Promise<void> {
+    const updates: Record<string, unknown> = { ...stampForUpdate() };
+    if (payload.label !== undefined) {
+      updates.label = toRequiredString(payload.label, 'Machine label');
+    }
+    if (payload.notes !== undefined) {
+      updates.notes = toOptionalString(payload.notes);
+    }
+    if (payload.order !== undefined) {
+      updates.order = payload.order;
+    }
+    await updateDoc(
+      doc(db, 'users', uid, 'exercises', exerciseId, 'machines', machineId),
+      updates,
+    );
+  },
+
+  async remove(uid: string, exerciseId: string, machineId: string): Promise<void> {
+    await deleteDoc(doc(db, 'users', uid, 'exercises', exerciseId, 'machines', machineId));
   },
 };
 
@@ -462,6 +514,8 @@ export const workoutStore = {
         reps: payload.reps,
         weightKg: payload.weightKg,
         rpe: payload.rpe,
+        machineId: payload.machineId,
+        machineLabel: payload.machineLabel,
       },
     );
   },
@@ -475,5 +529,64 @@ export const workoutStore = {
     await deleteDoc(
       doc(db, 'users', uid, 'workoutSessions', sessionId, 'exercises', sessionExerciseId, 'sets', setId),
     );
+  },
+
+  async getExerciseHistory(
+    uid: string,
+    exerciseId: string,
+    excludeDate: DateIso,
+    options?: { maxSessions?: number },
+  ): Promise<ExerciseHistory | null> {
+    const maxSessions = options?.maxSessions ?? 10;
+    const sessionsSnapshot = await getDocs(
+      query(
+        workoutSessionsCol(uid),
+        where('date', '<', excludeDate),
+        orderBy('date', 'desc'),
+        limit(maxSessions),
+      ),
+    );
+
+    if (sessionsSnapshot.empty) return null;
+
+    let maxWeightKg = 0;
+    let lastSessionSets: Array<{ reps: number; weightKg: number }> | null = null;
+    let lastSessionDate: DateIso | null = null;
+    let sessionCount = 0;
+
+    for (const sessionDoc of sessionsSnapshot.docs) {
+      const exercisesSnapshot = await getDocs(
+        query(
+          sessionExercisesCol(uid, sessionDoc.id),
+          where('exerciseId', '==', exerciseId),
+        ),
+      );
+
+      if (exercisesSnapshot.empty) continue;
+
+      sessionCount += 1;
+      const sessionDate = sessionDoc.data()['date'] as DateIso;
+
+      for (const exerciseDoc of exercisesSnapshot.docs) {
+        const setsSnapshot = await getDocs(
+          query(sessionSetsCol(uid, sessionDoc.id, exerciseDoc.id), orderBy('order', 'asc')),
+        );
+
+        const sets = setsSnapshot.docs.map((s) => s.data() as SessionSet);
+        if (sets.length === 0) continue;
+
+        const sessionMax = Math.max(...sets.map((s) => s.weightKg));
+        if (sessionMax > maxWeightKg) maxWeightKg = sessionMax;
+
+        if (lastSessionDate === null) {
+          lastSessionDate = sessionDate;
+          lastSessionSets = sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg }));
+        }
+      }
+    }
+
+    if (lastSessionDate === null) return null;
+
+    return { maxWeightKg, lastSessionSets: lastSessionSets ?? [], lastSessionDate, sessionCount };
   },
 };

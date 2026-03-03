@@ -30,7 +30,9 @@ service cloud.firestore {
         && data.reps >= 1
         && data.weightKg is number
         && data.weightKg >= 0
-        && (!('rpe' in data) || (data.rpe is number && data.rpe >= 1 && data.rpe <= 10));
+        && (!('rpe' in data) || (data.rpe is number && data.rpe >= 1 && data.rpe <= 10))
+        && (!('machineId' in data) || data.machineId is string)
+        && (!('machineLabel' in data) || data.machineLabel is string);
     }
 
     match /users/{uid} {
@@ -51,6 +53,19 @@ service cloud.firestore {
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0;
         allow delete: if isOwner(uid);
+
+        match /machines/{machineId} {
+          allow read: if isOwner(uid);
+          allow create: if isOwner(uid)
+            && ownerMatchesUid(uid)
+            && request.resource.data.label is string
+            && request.resource.data.label.size() > 0;
+          allow update: if isOwner(uid)
+            && ownerUnchanged()
+            && request.resource.data.label is string
+            && request.resource.data.label.size() > 0;
+          allow delete: if isOwner(uid);
+        }
       }
 
       match /routines/{routineId} {

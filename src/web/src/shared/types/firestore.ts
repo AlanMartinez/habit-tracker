@@ -130,12 +130,29 @@ export interface NewSessionExerciseInput {
   notes?: string;
 }
 
+export interface ExerciseMachine {
+  ownerUid: string;
+  label: string;
+  order: number;
+  notes?: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface NewExerciseMachineInput {
+  label: string;
+  order: number;
+  notes?: string;
+}
+
 export interface SessionSet {
   ownerUid: string;
   order: number;
   reps: number;
   weightKg: number;
   rpe?: number;
+  machineId?: string;
+  machineLabel?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -145,4 +162,13 @@ export interface NewSessionSetInput {
   reps: number;
   weightKg: number;
   rpe?: number;
+  machineId?: string;
+  machineLabel?: string;
+}
+
+export interface ExerciseHistory {
+  maxWeightKg: number;
+  lastSessionSets: Array<{ reps: number; weightKg: number }>;
+  lastSessionDate: DateIso;
+  sessionCount: number;
 }
