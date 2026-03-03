@@ -84,10 +84,10 @@ const getDateKey = (date: Date): DateIso => {
   return `${year}-${month}-${day}` as DateIso
 }
 
-const toDefaultSet = (order: number): WorkoutDraftSet => ({
+const toDefaultSet = (order: number, repsHint?: number): WorkoutDraftSet => ({
   id: `set-${order + 1}`,
   order,
-  reps: 1,
+  reps: repsHint ?? 1,
   weightKg: 0,
   rpe: 1,
 })
@@ -219,7 +219,7 @@ export const getTodayWorkoutDraft = async (
         targetRepsMin: item.targetRepsMin,
         targetRepsMax: item.targetRepsMax,
         targetSets,
-        sets: Array.from({ length: targetSets }, (_, index) => toDefaultSet(index)),
+        sets: Array.from({ length: targetSets }, (_, index) => toDefaultSet(index, item.targetRepsMin)),
         availableMachines,
       }
     }),
@@ -271,7 +271,7 @@ export const getRoutineDayTemplateDraft = async (
         targetRepsMin: item.targetRepsMin,
         targetRepsMax: item.targetRepsMax,
         targetSets,
-        sets: Array.from({ length: targetSets }, (_, index) => toDefaultSet(index)),
+        sets: Array.from({ length: targetSets }, (_, index) => toDefaultSet(index, item.targetRepsMin)),
         availableMachines,
       }
     }),

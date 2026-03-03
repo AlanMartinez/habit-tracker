@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/providers/useAuth'
-import { Alert, AppShell, Button, EmptyState } from '../../shared/components'
+import { Alert, AppShell, Badge, Button, EmptyState } from '../../shared/components'
 import { cn } from '../../shared/lib/cn'
 import {
   getExerciseHistoryForWorkout,
@@ -29,6 +29,9 @@ type WorkoutExercise = {
   collapsed: boolean
   sets: WorkoutSet[]
   availableMachines: Array<{ id: string; label: string }>
+  targetRepsMin?: number
+  targetRepsMax?: number
+  targetSets?: number
 }
 
 const toId = (): string =>
@@ -70,6 +73,9 @@ const mapDraftToExercise = (item: WorkoutDraft['exercises'][number]): WorkoutExe
     name: item.nameSnapshot,
     collapsed: true,
     availableMachines: item.availableMachines,
+    targetRepsMin: item.targetRepsMin,
+    targetRepsMax: item.targetRepsMax,
+    targetSets: item.targetSets,
     sets: item.sets.length > 0
       ? item.sets.map((set) => ({
           id: set.id,
@@ -104,6 +110,19 @@ const getCollapsedSummary = (exercise: WorkoutExercise): string => {
   if (primaryReps) parts.push(`${primaryReps} reps`)
   if (primaryKg) parts.push(`${primaryKg}kg`)
   return parts.join(' · ')
+}
+
+const formatTarget = (exercise: WorkoutExercise): string | null => {
+  const { targetSets, targetRepsMin, targetRepsMax } = exercise
+  if (!targetSets && !targetRepsMin) return null
+  const setsLabel = targetSets ? `${targetSets} x ` : ''
+  if (targetRepsMin && targetRepsMax && targetRepsMin !== targetRepsMax) {
+    return `${setsLabel}${targetRepsMin}-${targetRepsMax} reps`
+  }
+  if (targetRepsMin) {
+    return `${setsLabel}${targetRepsMin} reps`
+  }
+  return `${targetSets} sets`
 }
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -215,6 +234,7 @@ const ExerciseCard = ({
   onDrop,
 }: ExerciseCardProps) => {
   const activeMachineId = exercise.sets[0]?.machineId
+  const targetLabel = formatTarget(exercise)
 
   return (
     <div
@@ -253,6 +273,11 @@ const ExerciseCard = ({
             <p className="mt-0.5 text-[11px] font-medium text-[var(--text-muted)]">
               {getCollapsedSummary(exercise)}
             </p>
+          )}
+          {targetLabel && (
+            <Badge className="mt-1 self-start" tone="info">
+              Target: {targetLabel}
+            </Badge>
           )}
         </button>
 
