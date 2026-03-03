@@ -6,6 +6,7 @@ import {
   AppShell,
   Button,
   Card,
+  ConfirmDialog,
   EmptyState,
   Input,
   Modal,
@@ -61,6 +62,14 @@ export const ExercisesPage = () => {
     label: string
   } | null>(null)
   const [machineError, setMachineError] = useState<string | null>(null)
+
+  // --- Pending delete state ---
+  const [pendingDeleteExercise, setPendingDeleteExercise] = useState<WithId<Exercise> | null>(null)
+  const [pendingDeleteMachine, setPendingDeleteMachine] = useState<{
+    exerciseId: string
+    exerciseName: string
+    machine: WithId<ExerciseMachine>
+  } | null>(null)
 
   // --- Load exercises ---
   const refreshExercises = async () => {
@@ -141,12 +150,14 @@ export const ExercisesPage = () => {
     }
   }
 
-  const onDelete = async (id: string) => {
+  const onDelete = async () => {
+    if (!pendingDeleteExercise) return
     if (!user) return
 
     try {
       setError(null)
-      await deleteExercise(user.uid, id)
+      await deleteExercise(user.uid, pendingDeleteExercise.id)
+      setPendingDeleteExercise(null)
       await refreshExercises()
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Unable to delete exercise.')
@@ -220,14 +231,17 @@ export const ExercisesPage = () => {
     }
   }
 
-  const onDeleteMachine = async (exerciseId: string, machineId: string) => {
+  const onDeleteMachine = async () => {
+    if (!pendingDeleteMachine) return
     if (!user) return
 
+    const { exerciseId, machine } = pendingDeleteMachine
     setMachineError(null)
     try {
-      await deleteMachine(user.uid, exerciseId, machineId)
+      await deleteMachine(user.uid, exerciseId, machine.id)
+      setPendingDeleteMachine(null)
       // Re-order remaining machines
-      const remaining = (machinesByExercise[exerciseId] ?? []).filter((m) => m.id !== machineId)
+      const remaining = (machinesByExercise[exerciseId] ?? []).filter((m) => m.id !== machine.id)
       await Promise.all(
         remaining.map((m, i) => updateMachine(user.uid, exerciseId, m.id, { order: i })),
       )
@@ -339,7 +353,7 @@ export const ExercisesPage = () => {
                 <Button onClick={() => openEdit(item)} size="sm" variant="ghost">
                   Edit
                 </Button>
-                <Button onClick={() => void onDelete(item.id)} size="sm" variant="secondary">
+                <Button onClick={() => setPendingDeleteExercise(item)} size="sm" variant="secondary">
                   Delete
                 </Button>
               </div>
@@ -482,7 +496,11 @@ export const ExercisesPage = () => {
                                   </Button>
                                   <Button
                                     onClick={() =>
-                                      void onDeleteMachine(exercise.id, machine.id)
+                                      setPendingDeleteMachine({
+                                        exerciseId: exercise.id,
+                                        exerciseName: exercise.name,
+                                        machine,
+                                      })
                                     }
                                     size="sm"
                                     variant="ghost"
@@ -605,6 +623,22 @@ export const ExercisesPage = () => {
           value={form.notes}
         />
       </Modal>
+
+      <ConfirmDialog
+        description={`"${pendingDeleteExercise?.name ?? ''}" will be permanently deleted and cannot be recovered.`}
+        onCancel={() => setPendingDeleteExercise(null)}
+        onConfirm={() => void onDelete()}
+        open={pendingDeleteExercise !== null}
+        title="Delete exercise?"
+      />
+
+      <ConfirmDialog
+        description={`Machine "${pendingDeleteMachine?.machine.label ?? ''}" on exercise "${pendingDeleteMachine?.exerciseName ?? ''}" will be permanently deleted.`}
+        onCancel={() => setPendingDeleteMachine(null)}
+        onConfirm={() => void onDeleteMachine()}
+        open={pendingDeleteMachine !== null}
+        title="Delete machine?"
+      />
     </AppShell>
   )
 }

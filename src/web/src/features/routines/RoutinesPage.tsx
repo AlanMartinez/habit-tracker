@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/providers/useAuth'
 import type { Routine, WithId } from '../../shared/types/firestore'
@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   Card,
+  ConfirmDialog,
   EmptyState,
   Input,
   Modal,
@@ -30,6 +31,7 @@ export const RoutinesPage = () => {
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [daysPerWeek, setDaysPerWeek] = useState<DaysPerWeek>(3)
+  const [pendingDelete, setPendingDelete] = useState<WithId<Routine> | null>(null)
 
   const refreshRoutines = async () => {
     if (!user) {
@@ -92,14 +94,15 @@ export const RoutinesPage = () => {
     }
   }
 
-  const onDelete = async (routine: WithId<Routine>) => {
-    if (!user) {
+  const onDelete = async () => {
+    if (!pendingDelete || !user) {
       return
     }
 
     try {
       setError(null)
-      await deleteRoutine(user.uid, routine)
+      await deleteRoutine(user.uid, pendingDelete)
+      setPendingDelete(null)
       await refreshRoutines()
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Unable to delete routine.')
@@ -153,7 +156,7 @@ export const RoutinesPage = () => {
                 >
                   Open
                 </Button>
-                <Button onClick={() => void onDelete(item)} size="sm" variant="secondary">
+                <Button onClick={() => setPendingDelete(item)} size="sm" variant="secondary">
                   Delete
                 </Button>
               </div>
@@ -207,6 +210,14 @@ export const RoutinesPage = () => {
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        description={`"${pendingDelete?.name ?? ''}" will be permanently deleted and cannot be recovered.`}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => void onDelete()}
+        open={pendingDelete !== null}
+        title="Delete routine?"
+      />
     </AppShell>
   )
 }
