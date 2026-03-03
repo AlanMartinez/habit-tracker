@@ -4,15 +4,6 @@ import { useAuth } from '../../app/providers/useAuth'
 import { Alert, AppShell, Button, EmptyState } from '../../shared/components'
 import { cn } from '../../shared/lib/cn'
 import {
-  AppShell,
-  Button,
-  Card,
-  EmptyState,
-  Input,
-  Select,
-} from '../../shared/components'
-import { cn } from '../../shared/lib/cn'
-import {
   getExerciseHistoryForWorkout,
   getExerciseMachines,
   getRoutineDayTemplateDraft,
@@ -586,28 +577,6 @@ export const LogWorkoutPage = () => {
     )
   }
 
-  const updateExerciseMachine = (
-    exerciseId: string,
-    machineId: string,
-    machines: Array<{ id: string; label: string }>,
-  ) => {
-    const machine = machines.find((m) => m.id === machineId)
-    setHasOverrides(true)
-    setItems((prev) =>
-      prev.map((item) => {
-        if (item.id !== exerciseId) return item
-        return {
-          ...item,
-          sets: item.sets.map((set) => ({
-            ...set,
-            machineId: machine?.id,
-            machineLabel: machine?.label,
-          })),
-        }
-      }),
-    )
-  }
-
   const clearSetDefaultOnFocus = (
     exerciseId: string,
     setId: string,
@@ -761,11 +730,15 @@ export const LogWorkoutPage = () => {
             className="flex-1 appearance-none bg-transparent text-sm font-medium text-[var(--text-strong)] outline-none"
             onChange={(e) => setSelectedExercise(e.target.value)}
             value={selectedExercise}
-          />
+          >
+            {context.availableExercises.map((ex) => (
+              <option key={ex.id} value={ex.id}>{ex.name}</option>
+            ))}
+          </select>
           <Button onClick={() => void addAdHocExercise()} variant="secondary">
             Add exercise
           </Button>
-        </Card>
+        </div>
       )}
 
       {/* ── Empty state ────────────────────────────────────────────────────── */}
@@ -789,8 +762,13 @@ export const LogWorkoutPage = () => {
           isDragging={draggingExerciseId === exercise.id}
           key={exercise.id}
           exercise={exercise}
+          onExpand={() => onExpandExercise(exercise)}
+          onRemove={() => removeExercise(exercise.id)}
           onAddSet={() => addSet(exercise.id)}
+          onRemoveSet={(setId) => removeSet(exercise.id, setId)}
+          onUpdateSet={(setId, key, value) => updateSet(exercise.id, setId, key, value)}
           onClearDefault={(setId, key) => clearSetDefaultOnFocus(exercise.id, setId, key)}
+          onSelectMachine={(machineId) => updateExerciseMachine(exercise.id, machineId, exercise.availableMachines)}
           onDragOver={(e) => e.preventDefault()}
           onDragStart={() => setDraggingExerciseId(exercise.id)}
           onDrop={() => {
@@ -802,126 +780,7 @@ export const LogWorkoutPage = () => {
             setItems((prev) => reorderItems(prev, fromIndex, toIndex))
             setDraggingExerciseId(null)
           }}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
-              <h2 className="shrink-0 text-base font-semibold text-[var(--text-strong)]">
-                {index + 1}. {exercise.name}
-              </h2>
-              {exercise.availableMachines.map((machine) => {
-                const isSelected = exercise.sets[0]?.machineId === machine.id
-                return (
-                  <button
-                    className={cn(
-                      'rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors',
-                      isSelected
-                        ? 'bg-[var(--accent)] text-[var(--accent-contrast)]'
-                        : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--text)]',
-                    )}
-                    key={machine.id}
-                    onClick={() =>
-                      updateExerciseMachine(exercise.id, machine.id, exercise.availableMachines)
-                    }
-                  >
-                    {machine.label}
-                  </button>
-                )
-              })}
-            </div>
-            <div className="flex shrink-0 gap-2">
-              <Button
-                onClick={() => onExpandExercise(exercise)}
-                size="sm"
-                variant="ghost"
-              >
-                {exercise.collapsed ? 'Expand' : 'Collapse'}
-              </Button>
-              <Button onClick={() => removeExercise(exercise.id)} size="sm" variant="secondary">
-                Remove
-              </Button>
-            </div>
-          </div>
-
-          {!exercise.collapsed && (
-            <>
-              {exercise.sourceExerciseId && (() => {
-                const history = exerciseHistories[exercise.sourceExerciseId]
-                if (history === 'loading') {
-                  return <p className="text-xs text-[var(--text-muted)] animate-pulse">Loading history...</p>
-                }
-                if (!history) return null
-                return (
-                  <p className="text-xs text-[var(--text-muted)]">
-                    <span className="font-semibold text-[var(--text-strong)]">Last session:</span>{' '}
-                    {history.lastSessionSets.map((s) => `${s.reps} x ${s.weightKg}kg`).join(' / ')}
-                  </p>
-                )
-              })()}
-
-              <div className="grid grid-cols-[0.7fr_1fr_1fr_1fr_auto] gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                <span>Set</span>
-                <span>Reps</span>
-                <span>Kg</span>
-                <span>RIR</span>
-                <span>Del</span>
-              </div>
-
-              {exercise.sets.map((set, setIndex) => (
-                <div className="grid grid-cols-[0.7fr_1fr_1fr_1fr_auto] gap-2" key={set.id}>
-                  <div className="flex min-h-11 items-center rounded-lg border border-[var(--border-muted)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text)]">
-                    {setIndex + 1}
-                  </div>
-                  <Input
-                    id={`reps-${set.id}`}
-                    inputMode="numeric"
-                    label="Reps"
-                    onChange={(event) =>
-                      updateSet(exercise.id, set.id, 'reps', event.target.value)
-                    }
-                    onFocus={() => clearSetDefaultOnFocus(exercise.id, set.id, 'reps')}
-                    pattern="[0-9]*"
-                    placeholder="1"
-                    type="number"
-                    value={set.reps}
-                  />
-                  <Input
-                    id={`kg-${set.id}`}
-                    inputMode="decimal"
-                    label="Kg"
-                    onChange={(event) => updateSet(exercise.id, set.id, 'kg', event.target.value)}
-                    onFocus={() => clearSetDefaultOnFocus(exercise.id, set.id, 'kg')}
-                    placeholder="0"
-                    step="0.5"
-                    type="number"
-                    value={set.kg}
-                  />
-                  <Input
-                    id={`rir-${set.id}`}
-                    inputMode="numeric"
-                    label="RIR"
-                    onChange={(event) => updateSet(exercise.id, set.id, 'rir', event.target.value)}
-                    onFocus={() => clearSetDefaultOnFocus(exercise.id, set.id, 'rir')}
-                    pattern="[0-9]*"
-                    placeholder="1"
-                    type="number"
-                    value={set.rir}
-                  />
-                  <Button
-                    onClick={() => removeSet(exercise.id, set.id)}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    ✕
-                  </Button>
-                </div>
-              ))}
-
-              <Button onClick={() => addSet(exercise.id)} size="sm" variant="secondary">
-                Add set
-              </Button>
-            </>
-          )}
-        </Card>
+        />
       ))}
 
       {/* ── Save button ────────────────────────────────────────────────────── */}
