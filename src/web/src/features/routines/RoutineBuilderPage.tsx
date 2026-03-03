@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/providers/useAuth'
 import type { Exercise, WithId } from '../../shared/types/firestore'
 import {
+  Alert,
   AppShell,
   Badge,
   Button,
@@ -233,7 +234,7 @@ export const RoutineBuilderPage = () => {
       subtitle={isSaving ? 'Saving changes...' : `${days.length} days`}
       title={routineName}
     >
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <Alert onDismiss={() => setError(null)}>{error}</Alert>}
 
       <Card className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">

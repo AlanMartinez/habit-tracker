@@ -1,14 +1,7 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/providers/useAuth'
-import {
-  AppShell,
-  Button,
-  Card,
-  EmptyState,
-  Input,
-  Select,
-} from '../../shared/components'
+import { Alert, AppShell, Button, EmptyState } from '../../shared/components'
 import { cn } from '../../shared/lib/cn'
 import {
   getExerciseHistoryForWorkout,
@@ -52,10 +45,7 @@ const createSet = (defaultMachine?: { id: string; label: string }): WorkoutSet =
 })
 
 const reorderItems = <T,>(items: T[], fromIndex: number, toIndex: number): T[] => {
-  if (fromIndex === toIndex) {
-    return items
-  }
-
+  if (fromIndex === toIndex) return items
   const next = [...items]
   const [moved] = next.splice(fromIndex, 1)
   next.splice(toIndex, 0, moved)
@@ -68,11 +58,7 @@ const toDecimalText = (value: string): string => {
   const normalized = value.replace(',', '.')
   const digitsAndDots = normalized.replace(/[^0-9.]/g, '')
   const [integerPart, ...decimals] = digitsAndDots.split('.')
-
-  if (decimals.length === 0) {
-    return integerPart
-  }
-
+  if (decimals.length === 0) return integerPart
   return `${integerPart}.${decimals.join('')}`
 }
 
@@ -99,13 +85,9 @@ const mapDraftToExercise = (item: WorkoutDraft['exercises'][number]): WorkoutExe
 
 const parseNonNegativeNumber = (value: string): number => {
   const trimmed = value.trim()
-  if (!trimmed) {
-    return 0
-  }
+  if (!trimmed) return 0
   const parsed = Number(trimmed)
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    return 0
-  }
+  if (!Number.isFinite(parsed) || parsed < 0) return 0
   return parsed
 }
 
@@ -113,6 +95,309 @@ const parsePositiveNumber = (value: string, fallback: number): number => {
   const parsed = parseNonNegativeNumber(value)
   return parsed < 1 ? fallback : parsed
 }
+
+const getCollapsedSummary = (exercise: WorkoutExercise): string => {
+  const count = exercise.sets.length
+  const primaryKg = exercise.sets.find((s) => s.kg)?.kg
+  const primaryReps = exercise.sets.find((s) => s.reps)?.reps
+  const parts: string[] = [`${count} ${count === 1 ? 'set' : 'sets'}`]
+  if (primaryReps) parts.push(`${primaryReps} reps`)
+  if (primaryKg) parts.push(`${primaryKg}kg`)
+  return parts.join(' · ')
+}
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
+const IconGrip = () => (
+  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
+    <circle cx="5.5" cy="4" r="1.2" />
+    <circle cx="5.5" cy="8" r="1.2" />
+    <circle cx="5.5" cy="12" r="1.2" />
+    <circle cx="10.5" cy="4" r="1.2" />
+    <circle cx="10.5" cy="8" r="1.2" />
+    <circle cx="10.5" cy="12" r="1.2" />
+  </svg>
+)
+
+const IconChevronRight = ({ className }: { className?: string }) => (
+  <svg className={cn('h-4 w-4', className)} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+    <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+const IconX = ({ className }: { className?: string }) => (
+  <svg className={cn('h-3.5 w-3.5', className)} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+    <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+const IconPlus = ({ className }: { className?: string }) => (
+  <svg className={cn('h-5 w-5', className)} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+    <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+const IconHistory = () => (
+  <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+// ─── Skeleton loader ──────────────────────────────────────────────────────────
+
+const WorkoutSkeleton = () => (
+  <div className="space-y-3 pt-1">
+    <div className="h-11 animate-pulse rounded-2xl bg-[var(--surface-2)]" />
+    {[1, 2, 3].map((i) => (
+      <div key={i} className="h-[72px] animate-pulse rounded-3xl bg-[var(--surface-2)]" style={{ animationDelay: `${i * 80}ms` }} />
+    ))}
+  </div>
+)
+
+// ─── Number input ─────────────────────────────────────────────────────────────
+
+type NumInputProps = {
+  value: string
+  onChange: (v: string) => void
+  onFocus: () => void
+  label: string
+  decimal?: boolean
+}
+
+const NumInput = ({ value, onChange, onFocus, label, decimal }: NumInputProps) => (
+  <input
+    aria-label={label}
+    className="h-11 w-full rounded-xl border border-[var(--border-muted)] bg-[var(--surface-1)] px-1 text-center text-[15px] font-semibold tabular-nums text-[var(--text-strong)] outline-none transition-all duration-150 focus-visible:border-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-soft)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+    inputMode={decimal ? 'decimal' : 'numeric'}
+    onChange={(e) => onChange(decimal ? toDecimalText(e.target.value) : toIntegerText(e.target.value))}
+    onFocus={onFocus}
+    pattern={decimal ? undefined : '[0-9]*'}
+    placeholder="–"
+    step={decimal ? 0.5 : undefined}
+    type="number"
+    value={value}
+  />
+)
+
+// ─── Exercise card ────────────────────────────────────────────────────────────
+
+type ExerciseCardProps = {
+  exercise: WorkoutExercise
+  index: number
+  isDragging: boolean
+  history: ExerciseHistory | 'loading' | null | undefined
+  onExpand: () => void
+  onRemove: () => void
+  onAddSet: () => void
+  onRemoveSet: (setId: string) => void
+  onUpdateSet: (setId: string, key: 'reps' | 'kg' | 'rir', value: string) => void
+  onClearDefault: (setId: string, key: 'reps' | 'kg' | 'rir') => void
+  onSelectMachine: (machineId: string) => void
+  onDragStart: () => void
+  onDragOver: (e: React.DragEvent) => void
+  onDrop: () => void
+}
+
+const ExerciseCard = ({
+  exercise,
+  index,
+  isDragging,
+  history,
+  onExpand,
+  onRemove,
+  onAddSet,
+  onRemoveSet,
+  onUpdateSet,
+  onClearDefault,
+  onSelectMachine,
+  onDragStart,
+  onDragOver,
+  onDrop,
+}: ExerciseCardProps) => {
+  const activeMachineId = exercise.sets[0]?.machineId
+
+  return (
+    <div
+      className={cn(
+        'rounded-3xl border bg-[var(--surface-1)] shadow-[var(--card-shadow)] backdrop-blur-md transition-all duration-200',
+        isDragging ? 'scale-[0.97] border-[var(--accent)] opacity-50 ring-2 ring-[var(--accent-soft)]' : 'border-[var(--border)]',
+        !exercise.collapsed && 'border-[var(--border-strong)] ring-1 ring-[var(--accent-soft)]',
+      )}
+      draggable
+      onDragOver={onDragOver}
+      onDragStart={onDragStart}
+      onDrop={onDrop}
+    >
+      {/* ── Collapsed header ── */}
+      <div className={cn('flex items-center gap-2.5 px-4', exercise.collapsed ? 'py-4' : 'py-3.5 pb-2')}>
+        {/* Drag handle */}
+        <span className="shrink-0 cursor-grab text-[var(--text-muted)] active:cursor-grabbing">
+          <IconGrip />
+        </span>
+
+        {/* Number badge */}
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-[11px] font-bold tabular-nums text-[var(--accent-text)]">
+          {index + 1}
+        </span>
+
+        {/* Name + summary */}
+        <button
+          className="min-w-0 flex-1 text-left"
+          onClick={onExpand}
+          type="button"
+        >
+          <p className="truncate text-[15px] font-semibold leading-tight text-[var(--text-strong)]">
+            {exercise.name}
+          </p>
+          {exercise.collapsed && (
+            <p className="mt-0.5 text-[11px] font-medium text-[var(--text-muted)]">
+              {getCollapsedSummary(exercise)}
+            </p>
+          )}
+        </button>
+
+        {/* Chevron */}
+        <button
+          aria-label={exercise.collapsed ? 'Expand exercise' : 'Collapse exercise'}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--text-muted)] transition hover:bg-[var(--surface-2)] hover:text-[var(--text-strong)]"
+          onClick={onExpand}
+          type="button"
+        >
+          <IconChevronRight
+            className={cn('transition-transform duration-200', !exercise.collapsed && 'rotate-90')}
+          />
+        </button>
+
+        {/* Remove */}
+        <button
+          aria-label={`Remove ${exercise.name}`}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--text-muted)] transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30"
+          onClick={onRemove}
+          type="button"
+        >
+          <IconX />
+        </button>
+      </div>
+
+      {/* ── Expanded content ── */}
+      {!exercise.collapsed && (
+        <div className="space-y-3 px-4 pb-4">
+          {/* Machine chips */}
+          {exercise.availableMachines.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {exercise.availableMachines.map((machine) => {
+                const isSelected = activeMachineId === machine.id
+                return (
+                  <button
+                    className={cn(
+                      'shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-all duration-150',
+                      isSelected
+                        ? 'bg-[var(--accent)] text-white shadow-[0_2px_10px_rgba(124,58,237,0.35)]'
+                        : 'border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:border-[var(--border-strong)] hover:text-[var(--text)]',
+                    )}
+                    key={machine.id}
+                    onClick={() => onSelectMachine(machine.id)}
+                    type="button"
+                  >
+                    {machine.label}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* History bar */}
+          {exercise.sourceExerciseId && (
+            <>
+              {history === 'loading' && (
+                <div className="h-7 animate-pulse rounded-xl bg-[var(--surface-2)]" />
+              )}
+              {history && history !== 'loading' && history.lastSessionSets.length > 0 && (
+                <div className="flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-3 py-2">
+                  <IconHistory />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+                    Última
+                  </span>
+                  <span className="text-xs font-semibold text-[var(--text-strong)]">
+                    {history.lastSessionSets.map((s) => `${s.reps}×${s.weightKg}kg`).join(' / ')}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Set grid header */}
+          <div className="grid grid-cols-[2rem_1fr_1fr_1fr_2.5rem] items-center gap-1.5 px-0.5">
+            <span className="text-center text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">#</span>
+            <span className="text-center text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Reps</span>
+            <span className="text-center text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">kg</span>
+            <span className="text-center text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">RIR</span>
+            <span />
+          </div>
+
+          {/* Set rows */}
+          <div className="space-y-1.5">
+            {exercise.sets.map((set, setIndex) => (
+              <div className="grid grid-cols-[2rem_1fr_1fr_1fr_2.5rem] items-center gap-1.5" key={set.id}>
+                {/* Set number */}
+                <div className="flex h-11 items-center justify-center rounded-xl bg-[var(--surface-2)] text-[11px] font-bold tabular-nums text-[var(--text-muted)]">
+                  {setIndex + 1}
+                </div>
+
+                {/* Reps */}
+                <NumInput
+                  label={`Set ${setIndex + 1} reps for ${exercise.name}`}
+                  onChange={(v) => onUpdateSet(set.id, 'reps', v)}
+                  onFocus={() => onClearDefault(set.id, 'reps')}
+                  value={set.reps}
+                />
+
+                {/* Kg */}
+                <NumInput
+                  decimal
+                  label={`Set ${setIndex + 1} kg for ${exercise.name}`}
+                  onChange={(v) => onUpdateSet(set.id, 'kg', v)}
+                  onFocus={() => onClearDefault(set.id, 'kg')}
+                  value={set.kg}
+                />
+
+                {/* RIR */}
+                <NumInput
+                  label={`Set ${setIndex + 1} RIR for ${exercise.name}`}
+                  onChange={(v) => onUpdateSet(set.id, 'rir', v)}
+                  onFocus={() => onClearDefault(set.id, 'rir')}
+                  value={set.rir}
+                />
+
+                {/* Delete set */}
+                <button
+                  aria-label={`Remove set ${setIndex + 1}`}
+                  className="flex h-11 w-10 items-center justify-center rounded-xl text-[var(--text-muted)] transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30"
+                  onClick={() => onRemoveSet(set.id)}
+                  type="button"
+                >
+                  <IconX />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Add set button */}
+          <button
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--border)] py-2.5 text-xs font-semibold text-[var(--text-muted)] transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-text)]"
+            onClick={onAddSet}
+            type="button"
+          >
+            <IconPlus className="h-3.5 w-3.5" />
+            Add set
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export const LogWorkoutPage = () => {
   const navigate = useNavigate()
@@ -218,10 +503,7 @@ export const LogWorkoutPage = () => {
     setHasOverrides(true)
     setItems((prev) =>
       prev.map((item) => {
-        if (item.id !== exerciseId) {
-          return item
-        }
-
+        if (item.id !== exerciseId) return item
         const firstSet = item.sets[0]
         const defaultMachine = item.availableMachines[0]
         return {
@@ -250,14 +532,10 @@ export const LogWorkoutPage = () => {
     setHasOverrides(true)
     setItems((prev) =>
       prev.map((item) => {
-        if (item.id !== exerciseId) {
-          return item
-        }
+        if (item.id !== exerciseId) return item
 
         const targetSetIndex = item.sets.findIndex((set) => set.id === setId)
-        if (targetSetIndex < 0) {
-          return item
-        }
+        if (targetSetIndex < 0) return item
 
         const nextSets = item.sets.map((set) =>
           set.id === setId ? { ...set, [key]: normalizedValue } : set,
@@ -272,10 +550,7 @@ export const LogWorkoutPage = () => {
           }
         }
 
-        return {
-          ...item,
-          sets: nextSets,
-        }
+        return { ...item, sets: nextSets }
       }),
     )
   }
@@ -309,29 +584,14 @@ export const LogWorkoutPage = () => {
   ) => {
     setItems((prev) =>
       prev.map((item) => {
-        if (item.id !== exerciseId) {
-          return item
-        }
-
+        if (item.id !== exerciseId) return item
         return {
           ...item,
           sets: item.sets.map((set) => {
-            if (set.id !== setId) {
-              return set
-            }
-
-            if (key === 'reps' && set.reps === '1') {
-              return { ...set, reps: '' }
-            }
-
-            if (key === 'kg' && set.kg === '0') {
-              return { ...set, kg: '' }
-            }
-
-            if (key === 'rir' && set.rir === '1') {
-              return { ...set, rir: '' }
-            }
-
+            if (set.id !== setId) return set
+            if (key === 'reps' && set.reps === '1') return { ...set, reps: '' }
+            if (key === 'kg' && set.kg === '0') return { ...set, kg: '' }
+            if (key === 'rir' && set.rir === '1') return { ...set, rir: '' }
             return set
           }),
         }
@@ -366,22 +626,14 @@ export const LogWorkoutPage = () => {
     setHasOverrides(true)
     setItems((prev) =>
       prev.map((item) => {
-        if (item.id !== exerciseId || item.sets.length <= 1) {
-          return item
-        }
-
-        return {
-          ...item,
-          sets: item.sets.filter((set) => set.id !== setId),
-        }
+        if (item.id !== exerciseId || item.sets.length <= 1) return item
+        return { ...item, sets: item.sets.filter((set) => set.id !== setId) }
       }),
     )
   }
 
   const onSave = async () => {
-    if (!user || !context) {
-      return
-    }
+    if (!user || !context) return
 
     setIsSaving(true)
     setError(null)
@@ -416,17 +668,21 @@ export const LogWorkoutPage = () => {
     }
   }
 
+  // ── Loading ──────────────────────────────────────────────────────────────────
+
   if (isLoading) {
     return (
-      <AppShell onBack={() => navigate('/app/workout')} title="Log workout">
-        <p className="text-sm text-[var(--text-muted)]">Loading workout...</p>
+      <AppShell onBack={() => navigate('/app/workout')} title="Log workout" withNav={false}>
+        <WorkoutSkeleton />
       </AppShell>
     )
   }
 
+  // ── No context ───────────────────────────────────────────────────────────────
+
   if (!context) {
     return (
-      <AppShell onBack={() => navigate('/app/workout')} title="Log workout">
+      <AppShell onBack={() => navigate('/app/workout')} title="Log workout" withNav={false}>
         <EmptyState
           action={<Button onClick={() => navigate('/app/workout')}>Back to dashboard</Button>}
           description="Workout context is unavailable."
@@ -436,44 +692,56 @@ export const LogWorkoutPage = () => {
     )
   }
 
+  // ── Main render ──────────────────────────────────────────────────────────────
+
   return (
     <AppShell
       onBack={() => navigate('/app/workout')}
       subtitle={context.routineName ?? 'No active routine'}
       title={context.routineDayLabel ? `Log: ${context.routineDayLabel}` : 'Log workout'}
+      withNav={false}
     >
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <Alert onDismiss={() => setError(null)}>{error}</Alert>}
 
-      <details className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-1)] p-4">
-        <summary className="cursor-pointer text-sm font-semibold text-[var(--text-strong)]">
-          Default exercises for selected day
-        </summary>
-        {defaultExerciseNames.length === 0 && (
-          <p className="mt-2 text-sm text-[var(--text-muted)]">No default exercises configured.</p>
-        )}
-        {defaultExerciseNames.length > 0 && (
-          <p className="mt-2 text-sm text-[var(--text-muted)]">{defaultExerciseNames.join(' • ')}</p>
-        )}
-      </details>
+      {/* ── Day template chips ─────────────────────────────────────────────── */}
+      {defaultExerciseNames.length > 0 && (
+        <div>
+          <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+            Day template
+          </p>
+          <div className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {defaultExerciseNames.map((name) => (
+              <span
+                className="shrink-0 rounded-full border border-[var(--border-muted)] bg-[var(--surface-2)] px-3 py-1 text-[11px] font-medium text-[var(--text-muted)]"
+                key={name}
+              >
+                {name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
+      {/* ── Exercise picker ────────────────────────────────────────────────── */}
       {context.availableExercises.length > 0 && (
-        <Card className="space-y-3">
-          <Select
-            id="add-exercise"
-            label="Add ad-hoc exercise"
-            onChange={(event) => setSelectedExercise(event.target.value)}
-            options={context.availableExercises.map((exercise) => ({
-              label: exercise.name,
-              value: exercise.id,
-            }))}
+        <div className="flex items-center gap-2 rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-1)] px-4 py-2.5">
+          <select
+            aria-label="Select exercise to add"
+            className="flex-1 appearance-none bg-transparent text-sm font-medium text-[var(--text-strong)] outline-none"
+            onChange={(e) => setSelectedExercise(e.target.value)}
             value={selectedExercise}
-          />
+          >
+            {context.availableExercises.map((ex) => (
+              <option key={ex.id} value={ex.id}>{ex.name}</option>
+            ))}
+          </select>
           <Button onClick={() => void addAdHocExercise()} variant="secondary">
             Add exercise
           </Button>
-        </Card>
+        </div>
       )}
 
+      {/* ── Empty state ────────────────────────────────────────────────────── */}
       {items.length === 0 && (
         <EmptyState
           action={<Button onClick={() => void addAdHocExercise()}>Add exercise</Button>}
@@ -482,155 +750,52 @@ export const LogWorkoutPage = () => {
         />
       )}
 
+      {/* ── Exercise list ──────────────────────────────────────────────────── */}
       {items.map((exercise, index) => (
-        <Card
-          className="space-y-3"
-          draggable
+        <ExerciseCard
+          history={
+            exercise.sourceExerciseId
+              ? exerciseHistories[exercise.sourceExerciseId]
+              : undefined
+          }
+          index={index}
+          isDragging={draggingExerciseId === exercise.id}
           key={exercise.id}
-          onDragOver={(event) => event.preventDefault()}
+          exercise={exercise}
+          onExpand={() => onExpandExercise(exercise)}
+          onRemove={() => removeExercise(exercise.id)}
+          onAddSet={() => addSet(exercise.id)}
+          onRemoveSet={(setId) => removeSet(exercise.id, setId)}
+          onUpdateSet={(setId, key, value) => updateSet(exercise.id, setId, key, value)}
+          onClearDefault={(setId, key) => clearSetDefaultOnFocus(exercise.id, setId, key)}
+          onSelectMachine={(machineId) => updateExerciseMachine(exercise.id, machineId, exercise.availableMachines)}
+          onDragOver={(e) => e.preventDefault()}
           onDragStart={() => setDraggingExerciseId(exercise.id)}
           onDrop={() => {
-            if (!draggingExerciseId || draggingExerciseId === exercise.id) {
-              return
-            }
-
+            if (!draggingExerciseId || draggingExerciseId === exercise.id) return
             const fromIndex = items.findIndex((item) => item.id === draggingExerciseId)
             const toIndex = items.findIndex((item) => item.id === exercise.id)
-
-            if (fromIndex < 0 || toIndex < 0) {
-              return
-            }
-
+            if (fromIndex < 0 || toIndex < 0) return
             setHasOverrides(true)
             setItems((prev) => reorderItems(prev, fromIndex, toIndex))
             setDraggingExerciseId(null)
           }}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
-              <h2 className="shrink-0 text-base font-semibold text-[var(--text-strong)]">
-                {index + 1}. {exercise.name}
-              </h2>
-              {exercise.availableMachines.map((machine) => {
-                const isSelected = exercise.sets[0]?.machineId === machine.id
-                return (
-                  <button
-                    className={cn(
-                      'rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors',
-                      isSelected
-                        ? 'bg-[var(--accent)] text-[var(--accent-contrast)]'
-                        : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--text)]',
-                    )}
-                    key={machine.id}
-                    onClick={() =>
-                      updateExerciseMachine(exercise.id, machine.id, exercise.availableMachines)
-                    }
-                  >
-                    {machine.label}
-                  </button>
-                )
-              })}
-            </div>
-            <div className="flex shrink-0 gap-2">
-              <Button
-                onClick={() => onExpandExercise(exercise)}
-                size="sm"
-                variant="ghost"
-              >
-                {exercise.collapsed ? 'Expand' : 'Collapse'}
-              </Button>
-              <Button onClick={() => removeExercise(exercise.id)} size="sm" variant="secondary">
-                Remove
-              </Button>
-            </div>
-          </div>
-
-          {!exercise.collapsed && (
-            <>
-              {exercise.sourceExerciseId && (() => {
-                const history = exerciseHistories[exercise.sourceExerciseId]
-                if (history === 'loading') {
-                  return <p className="text-xs text-[var(--text-muted)] animate-pulse">Loading history...</p>
-                }
-                if (!history) return null
-                return (
-                  <p className="text-xs text-[var(--text-muted)]">
-                    <span className="font-semibold text-[var(--text-strong)]">Last session:</span>{' '}
-                    {history.lastSessionSets.map((s) => `${s.reps} x ${s.weightKg}kg`).join(' / ')}
-                  </p>
-                )
-              })()}
-
-              <div className="grid grid-cols-[0.7fr_1fr_1fr_1fr_auto] gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                <span>Set</span>
-                <span>Reps</span>
-                <span>Kg</span>
-                <span>RIR</span>
-                <span>Del</span>
-              </div>
-
-              {exercise.sets.map((set, setIndex) => (
-                <div className="grid grid-cols-[0.7fr_1fr_1fr_1fr_auto] gap-2" key={set.id}>
-                  <div className="flex min-h-11 items-center rounded-lg border border-[var(--border-muted)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text)]">
-                    {setIndex + 1}
-                  </div>
-                  <Input
-                    id={`reps-${set.id}`}
-                    inputMode="numeric"
-                    label="Reps"
-                    onChange={(event) =>
-                      updateSet(exercise.id, set.id, 'reps', event.target.value)
-                    }
-                    onFocus={() => clearSetDefaultOnFocus(exercise.id, set.id, 'reps')}
-                    pattern="[0-9]*"
-                    placeholder="1"
-                    type="number"
-                    value={set.reps}
-                  />
-                  <Input
-                    id={`kg-${set.id}`}
-                    inputMode="decimal"
-                    label="Kg"
-                    onChange={(event) => updateSet(exercise.id, set.id, 'kg', event.target.value)}
-                    onFocus={() => clearSetDefaultOnFocus(exercise.id, set.id, 'kg')}
-                    placeholder="0"
-                    step="0.5"
-                    type="number"
-                    value={set.kg}
-                  />
-                  <Input
-                    id={`rir-${set.id}`}
-                    inputMode="numeric"
-                    label="RIR"
-                    onChange={(event) => updateSet(exercise.id, set.id, 'rir', event.target.value)}
-                    onFocus={() => clearSetDefaultOnFocus(exercise.id, set.id, 'rir')}
-                    pattern="[0-9]*"
-                    placeholder="1"
-                    type="number"
-                    value={set.rir}
-                  />
-                  <Button
-                    onClick={() => removeSet(exercise.id, set.id)}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    ✕
-                  </Button>
-                </div>
-              ))}
-
-              <Button onClick={() => addSet(exercise.id)} size="sm" variant="secondary">
-                Add set
-              </Button>
-            </>
-          )}
-        </Card>
+        />
       ))}
 
-      <div className="sticky bottom-20 z-10 rounded-2xl bg-transparent pt-2">
-        <Button className="w-full" loading={isSaving} onClick={() => void onSave()}>
-          {isSaving ? 'Saving...' : 'Save Workout'}
-        </Button>
+      {/* ── Save button ────────────────────────────────────────────────────── */}
+      <div className="sticky bottom-20 z-10 pt-2">
+        <button
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent)] py-3.5 text-[15px] font-bold text-white shadow-[0_8px_24px_rgba(124,58,237,0.4)] transition-all duration-200 hover:bg-[var(--accent-hover)] hover:shadow-[0_12px_32px_rgba(124,58,237,0.5)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={isSaving}
+          onClick={() => void onSave()}
+          type="button"
+        >
+          {isSaving ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent" />
+          ) : null}
+          {isSaving ? 'Saving…' : 'Save Workout'}
+        </button>
       </div>
     </AppShell>
   )

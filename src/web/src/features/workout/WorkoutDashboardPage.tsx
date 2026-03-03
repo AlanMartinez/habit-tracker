@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/providers/useAuth'
 import {
+  Alert,
   AppShell,
   Badge,
   Button,
@@ -9,6 +10,7 @@ import {
   EmptyState,
   Modal,
   Select,
+  Skeleton,
 } from '../../shared/components'
 import { getTodayWorkoutDraft, type WorkoutDraft } from './workout.data'
 
@@ -73,9 +75,14 @@ export const WorkoutDashboardPage = () => {
 
   return (
     <AppShell subtitle={getDateLabel(new Date())} title="Workout">
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <Alert onDismiss={() => setError(null)}>{error}</Alert>}
 
-      {isLoading && <p className="text-sm text-[var(--text-muted)]">Loading workout...</p>}
+      {isLoading && (
+        <>
+          <Skeleton variant="card" />
+          <Skeleton variant="card" />
+        </>
+      )}
 
       {!isLoading && context && !context.routineId && (
         <EmptyState

@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../app/providers/useAuth'
-import { AppShell, Button, Card, Drawer, EmptyState, Skeleton } from '../../shared/components'
+import { Alert, AppShell, Button, Card, Drawer, EmptyState, Skeleton } from '../../shared/components'
 import {
   getWorkoutSessionDetail,
   listWorkoutsForMonth,
@@ -108,7 +108,7 @@ export const HistoryPage = () => {
 
   return (
     <AppShell title="History">
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <Alert onDismiss={() => setError(null)}>{error}</Alert>}
 
       {isLoading && <Skeleton variant="calendar" />}
 

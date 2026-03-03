@@ -1,8 +1,9 @@
-﻿import { Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/providers/useAuth'
 import type { Routine, WithId } from '../../shared/types/firestore'
 import {
+  Alert,
   AppShell,
   Badge,
   Button,
@@ -21,6 +22,7 @@ import {
 } from './routines.data'
 
 export const RoutinesPage = () => {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [items, setItems] = useState<Array<WithId<Routine>>>([])
   const [open, setOpen] = useState(false)
@@ -113,7 +115,7 @@ export const RoutinesPage = () => {
       }
       title="Routines"
     >
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <Alert onDismiss={() => setError(null)}>{error}</Alert>}
       {isLoading && <Skeleton variant="card" />}
 
       {!isLoading && items.length === 0 && (
@@ -144,12 +146,13 @@ export const RoutinesPage = () => {
                     Set active
                   </Button>
                 )}
-                <Link
-                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--text)] transition hover:opacity-90"
-                  to={`/app/routines/${item.id}`}
+                <Button
+                  onClick={() => navigate(`/app/routines/${item.id}`)}
+                  size="sm"
+                  variant="secondary"
                 >
                   Open
-                </Link>
+                </Button>
                 <Button onClick={() => void onDelete(item)} size="sm" variant="secondary">
                   Delete
                 </Button>
