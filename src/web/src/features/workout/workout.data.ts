@@ -352,7 +352,13 @@ export const saveWorkout = async (uid: string, payload: SaveWorkoutInput): Promi
     }
   }
 
-  await workoutStore.finish(uid, sessionId)
+}
+
+export const finishWorkout = async (uid: string, dateKey: DateIso): Promise<void> => {
+  if (!DATE_KEY_PATTERN.test(dateKey)) {
+    throw new Error('Date key must be YYYY-MM-DD.')
+  }
+  await workoutStore.finish(uid, dateKey)
 }
 
 export const getExerciseHistoryForWorkout = async (

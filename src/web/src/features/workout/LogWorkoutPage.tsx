@@ -4,6 +4,7 @@ import { useAuth } from '../../app/providers/useAuth'
 import { Alert, AppShell, Badge, Button, EmptyState } from '../../shared/components'
 import { cn } from '../../shared/lib/cn'
 import {
+  finishWorkout,
   getExerciseHistoryForWorkout,
   getExerciseMachines,
   getRoutineDayTemplateDraft,
@@ -434,10 +435,14 @@ export const LogWorkoutPage = () => {
   const [draggingExerciseId, setDraggingExerciseId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isSaved, setIsSaved] = useState(false)
+  const [savedItemsSnapshot, setSavedItemsSnapshot] = useState<string | null>(null)
   const [hasOverrides, setHasOverrides] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [defaultExerciseNames, setDefaultExerciseNames] = useState<string[]>([])
   const [exerciseHistories, setExerciseHistories] = useState<Record<string, ExerciseHistory | 'loading' | null>>({})
+
+  const hasChanges = savedItemsSnapshot === null || JSON.stringify(items) !== savedItemsSnapshot
 
   useEffect(() => {
     const load = async () => {
@@ -685,9 +690,24 @@ export const LogWorkoutPage = () => {
         })),
       })
 
-      navigate('/app/workout')
+      setIsSaved(true)
+      setSavedItemsSnapshot(JSON.stringify(items))
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Unable to save workout.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const onFinish = async () => {
+    if (!user || !context) return
+    setIsSaving(true)
+    setError(null)
+    try {
+      await finishWorkout(user.uid, context.dateKey)
+      navigate('/app/workout')
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Unable to finish workout.')
     } finally {
       setIsSaving(false)
     }
@@ -808,19 +828,33 @@ export const LogWorkoutPage = () => {
         />
       ))}
 
-      {/* ── Save button ────────────────────────────────────────────────────── */}
+      {/* ── Save / Finish button ───────────────────────────────────────────── */}
       <div className="sticky bottom-20 z-10 pt-2">
-        <button
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent)] py-3.5 text-[15px] font-bold text-white shadow-[0_8px_24px_rgba(124,58,237,0.4)] transition-all duration-200 hover:bg-[var(--accent-hover)] hover:shadow-[0_12px_32px_rgba(124,58,237,0.5)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={isSaving}
-          onClick={() => void onSave()}
-          type="button"
-        >
-          {isSaving ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent" />
-          ) : null}
-          {isSaving ? 'Saving…' : 'Save Workout'}
-        </button>
+        {isSaved && !hasChanges ? (
+          <button
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent)] py-3.5 text-[15px] font-bold text-white shadow-[0_8px_24px_rgba(124,58,237,0.4)] transition-all duration-200 hover:bg-[var(--accent-hover)] hover:shadow-[0_12px_32px_rgba(124,58,237,0.5)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isSaving}
+            onClick={() => void onFinish()}
+            type="button"
+          >
+            {isSaving ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent" />
+            ) : null}
+            {isSaving ? 'Finishing…' : 'Finish Workout'}
+          </button>
+        ) : (
+          <button
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent)] py-3.5 text-[15px] font-bold text-white shadow-[0_8px_24px_rgba(124,58,237,0.4)] transition-all duration-200 hover:bg-[var(--accent-hover)] hover:shadow-[0_12px_32px_rgba(124,58,237,0.5)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isSaving}
+            onClick={() => void onSave()}
+            type="button"
+          >
+            {isSaving ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent" />
+            ) : null}
+            {isSaving ? 'Saving…' : 'Save Workout'}
+          </button>
+        )}
       </div>
     </AppShell>
   )
