@@ -284,7 +284,7 @@ const ExerciseCard = ({
               {getCollapsedSummary(exercise)}
             </p>
           )}
-          {targetLabel && (
+          {exercise.collapsed && targetLabel && (
             <Badge className="mt-1 self-start" tone="info">
               Target: {targetLabel}
             </Badge>
@@ -317,27 +317,36 @@ const ExerciseCard = ({
       {/* ── Expanded content ── */}
       {!exercise.collapsed && (
         <div className="space-y-3 px-4 pb-4">
-          {/* Machine chips */}
-          {exercise.availableMachines.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {exercise.availableMachines.map((machine) => {
-                const isSelected = activeMachineId === machine.id
-                return (
-                  <button
-                    className={cn(
-                      'shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-all duration-150',
-                      isSelected
-                        ? 'bg-[var(--accent)] text-white shadow-[0_2px_10px_rgba(124,58,237,0.35)]'
-                        : 'border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:border-[var(--border-strong)] hover:text-[var(--text)]',
-                    )}
-                    key={machine.id}
-                    onClick={() => onSelectMachine(machine.id)}
-                    type="button"
-                  >
-                    {machine.label}
-                  </button>
-                )
-              })}
+          {/* Target + Machine chips row */}
+          {(targetLabel || exercise.availableMachines.length > 0) && (
+            <div className="flex items-center gap-2">
+              {targetLabel && (
+                <Badge className="shrink-0" tone="info">
+                  Target: {targetLabel}
+                </Badge>
+              )}
+              {exercise.availableMachines.length > 0 && (
+                <div className={cn('flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden', targetLabel && 'ml-auto')}>
+                  {exercise.availableMachines.map((machine) => {
+                    const isSelected = activeMachineId === machine.id
+                    return (
+                      <button
+                        className={cn(
+                          'shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-all duration-150',
+                          isSelected
+                            ? 'bg-[var(--accent)] text-white shadow-[0_2px_10px_rgba(124,58,237,0.35)]'
+                            : 'border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:border-[var(--border-strong)] hover:text-[var(--text)]',
+                        )}
+                        key={machine.id}
+                        onClick={() => onSelectMachine(machine.id)}
+                        type="button"
+                      >
+                        {machine.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
 
