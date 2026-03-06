@@ -106,8 +106,15 @@ const getCollapsedSummary = (exercise: WorkoutExercise): string => {
   const count = exercise.sets.length
   const primaryKg = exercise.sets.find((s) => s.kg)?.kg
   const primaryReps = exercise.sets.find((s) => s.reps)?.reps
+  const { targetRepsMin, targetRepsMax } = exercise
+  const repsDisplay =
+    targetRepsMin != null && targetRepsMax != null
+      ? targetRepsMin === targetRepsMax
+        ? `${targetRepsMin}`
+        : `${targetRepsMin}-${targetRepsMax}`
+      : primaryReps
   const parts: string[] = [`${count} ${count === 1 ? 'set' : 'sets'}`]
-  if (primaryReps) parts.push(`${primaryReps} reps`)
+  if (repsDisplay) parts.push(`${repsDisplay} reps`)
   if (primaryKg) parts.push(`${primaryKg}kg`)
   return parts.join(' · ')
 }
