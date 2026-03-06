@@ -5,6 +5,7 @@ import type {
   DateIso,
   Exercise,
   ExerciseHistory,
+  RoutineDayExercise,
   RoutineType,
   SessionSet,
   UserProfile,
@@ -116,6 +117,21 @@ const toDraftSet = (item: WithId<SessionSet>): WorkoutDraftSet => ({
   machineLabel: item.machineLabel,
 })
 
+const buildTargetMap = (
+  routineDayExercises: Array<WithId<RoutineDayExercise>>,
+): Map<string, { targetRepsMin?: number; targetRepsMax?: number; targetSets?: number }> => {
+  return new Map(
+    routineDayExercises.map((item) => [
+      item.exerciseId,
+      {
+        targetRepsMin: item.targetRepsMin,
+        targetRepsMax: item.targetRepsMax,
+        targetSets: item.targetSets,
+      },
+    ]),
+  )
+}
+
 export const getTodayWorkoutDraft = async (
   uid: string,
   options?: { routineDayId?: string },
@@ -169,17 +185,32 @@ export const getTodayWorkoutDraft = async (
 
   if (existingSession && shouldUseExistingSession) {
     const sessionExercises = await workoutStore.listExercises(uid, existingSession.id)
+
+    // Fetch routine template targets for this day so we can merge them
+    const routineId = existingSession.routineId
+    const routineDayId = existingSession.routineDayId
+    const targetMap = routineId && routineDayId
+      ? buildTargetMap(await routineStore.listDayExercises(uid, routineId, routineDayId))
+      : new Map<string, { targetRepsMin?: number; targetRepsMax?: number; targetSets?: number }>()
+
     const exercises = await Promise.all(
       sessionExercises.map(async (item) => {
         const sets = await workoutStore.listSets(uid, existingSession.id, item.id)
         const availableMachines = item.exerciseId
           ? (await exerciseMachineStore.list(uid, item.exerciseId)).map((m) => ({ id: m.id, label: m.label }))
           : []
+
+        // Merge targets from the routine template when available
+        const targets = item.exerciseId ? (targetMap.get(item.exerciseId) ?? {}) : {}
+
         return {
           id: item.id,
           order: item.order,
           exerciseId: item.exerciseId,
           nameSnapshot: item.nameSnapshot,
+          targetRepsMin: targets.targetRepsMin,
+          targetRepsMax: targets.targetRepsMax,
+          targetSets: targets.targetSets,
           sets: sets.map(toDraftSet),
           availableMachines,
         } satisfies WorkoutDraftExercise
