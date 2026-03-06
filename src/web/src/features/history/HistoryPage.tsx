@@ -200,7 +200,8 @@ export const HistoryPage = () => {
                     .map((set) => {
                       const rirSuffix = set.rpe === undefined ? '' : ` RIR ${set.rpe}`
                       const machineSuffix = set.machineLabel ? ` [${set.machineLabel}]` : ''
-                      return `${set.reps} x ${set.weightKg}kg${rirSuffix}${machineSuffix}`
+                      const dropsetSuffix = set.isDropset ? ' ↓DS' : ''
+                      return `${set.reps} x ${set.weightKg}kg${rirSuffix}${machineSuffix}${dropsetSuffix}`
                     })
                     .join(', ')}
                 </p>

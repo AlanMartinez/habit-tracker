@@ -153,6 +153,7 @@ export interface SessionSet {
   rpe?: number;
   machineId?: string;
   machineLabel?: string;
+  isDropset?: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -164,6 +165,7 @@ export interface NewSessionSetInput {
   rpe?: number;
   machineId?: string;
   machineLabel?: string;
+  isDropset?: boolean;
 }
 
 export interface ExerciseHistory {

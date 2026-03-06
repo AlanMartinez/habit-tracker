@@ -19,6 +19,7 @@ export type WorkoutDraftSet = {
   rpe?: number
   machineId?: string
   machineLabel?: string
+  isDropset?: boolean
 }
 
 export type WorkoutDraftExercise = {
@@ -65,6 +66,7 @@ export type SaveWorkoutInput = {
       rpe?: number
       machineId?: string
       machineLabel?: string
+      isDropset?: boolean
     }>
   }>
 }
@@ -114,6 +116,7 @@ const toDraftSet = (item: WithId<SessionSet>): WorkoutDraftSet => ({
   rpe: item.rpe,
   machineId: item.machineId,
   machineLabel: item.machineLabel,
+  isDropset: item.isDropset,
 })
 
 export const getTodayWorkoutDraft = async (
@@ -348,6 +351,7 @@ export const saveWorkout = async (uid: string, payload: SaveWorkoutInput): Promi
         rpe: set.rpe,
         machineId: set.machineId,
         machineLabel: set.machineLabel,
+        isDropset: set.isDropset,
       })
     }
   }

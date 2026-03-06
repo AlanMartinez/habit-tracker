@@ -20,6 +20,7 @@ type WorkoutSet = {
   rir: string
   machineId?: string
   machineLabel?: string
+  isDropset?: boolean
 }
 
 type WorkoutExercise = {
@@ -84,6 +85,7 @@ const mapDraftToExercise = (item: WorkoutDraft['exercises'][number]): WorkoutExe
           rir: (set.rpe ?? 1) > 1 ? String(set.rpe ?? 1) : '',
           machineId: set.machineId ?? defaultMachine?.id,
           machineLabel: set.machineLabel ?? defaultMachine?.label,
+          isDropset: set.isDropset ?? false,
         }))
       : [createSet(defaultMachine)],
   }
@@ -162,6 +164,12 @@ const IconHistory = () => (
   </svg>
 )
 
+const IconDropset = () => (
+  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+    <path d="M12 5v14M5 15l7 7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
 // ─── Skeleton loader ──────────────────────────────────────────────────────────
 
 const WorkoutSkeleton = () => (
@@ -211,6 +219,7 @@ type ExerciseCardProps = {
   onRemoveSet: (setId: string) => void
   onUpdateSet: (setId: string, key: 'reps' | 'kg' | 'rir', value: string) => void
   onClearDefault: (setId: string, key: 'reps' | 'kg' | 'rir') => void
+  onToggleDropset: (setId: string) => void
   onSelectMachine: (machineId: string) => void
   onDragStart: () => void
   onDragOver: (e: React.DragEvent) => void
@@ -228,6 +237,7 @@ const ExerciseCard = ({
   onRemoveSet,
   onUpdateSet,
   onClearDefault,
+  onToggleDropset,
   onSelectMachine,
   onDragStart,
   onDragOver,
@@ -352,18 +362,19 @@ const ExerciseCard = ({
           )}
 
           {/* Set grid header */}
-          <div className="grid grid-cols-[2rem_1fr_1fr_1fr_2.5rem] items-center gap-1.5 px-0.5">
+          <div className="grid grid-cols-[2rem_1fr_1fr_1fr_2rem_2.5rem] items-center gap-1.5 px-0.5">
             <span className="text-center text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">#</span>
             <span className="text-center text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Reps</span>
             <span className="text-center text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">kg</span>
             <span className="text-center text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">RIR</span>
+            <span className="text-center text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">DS</span>
             <span />
           </div>
 
           {/* Set rows */}
           <div className="space-y-1.5">
             {exercise.sets.map((set, setIndex) => (
-              <div className="grid grid-cols-[2rem_1fr_1fr_1fr_2.5rem] items-center gap-1.5" key={set.id}>
+              <div className="grid grid-cols-[2rem_1fr_1fr_1fr_2rem_2.5rem] items-center gap-1.5" key={set.id}>
                 {/* Set number */}
                 <div className="flex h-11 items-center justify-center rounded-xl bg-[var(--surface-2)] text-[11px] font-bold tabular-nums text-[var(--text-muted)]">
                   {setIndex + 1}
@@ -393,6 +404,22 @@ const ExerciseCard = ({
                   onFocus={() => onClearDefault(set.id, 'rir')}
                   value={set.rir}
                 />
+
+                {/* Dropset toggle */}
+                <button
+                  aria-label={`Toggle dropset for set ${setIndex + 1}`}
+                  aria-pressed={set.isDropset === true}
+                  className={cn(
+                    'flex h-11 w-8 items-center justify-center rounded-xl transition',
+                    set.isDropset
+                      ? 'bg-[var(--accent)] text-white shadow-[0_2px_8px_rgba(124,58,237,0.35)]'
+                      : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--accent-text)]',
+                  )}
+                  onClick={() => onToggleDropset(set.id)}
+                  type="button"
+                >
+                  <IconDropset />
+                </button>
 
                 {/* Delete set */}
                 <button
@@ -657,6 +684,21 @@ export const LogWorkoutPage = () => {
     )
   }
 
+  const toggleDropset = (exerciseId: string, setId: string) => {
+    setHasOverrides(true)
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== exerciseId) return item
+        return {
+          ...item,
+          sets: item.sets.map((set) =>
+            set.id === setId ? { ...set, isDropset: !set.isDropset } : set,
+          ),
+        }
+      }),
+    )
+  }
+
   const onSave = async () => {
     if (!user || !context) return
 
@@ -681,6 +723,7 @@ export const LogWorkoutPage = () => {
             rpe: parsePositiveNumber(set.rir, 1),
             machineId: set.machineId,
             machineLabel: set.machineLabel,
+            isDropset: set.isDropset || undefined,
           })),
         })),
       })
@@ -793,6 +836,7 @@ export const LogWorkoutPage = () => {
           onRemoveSet={(setId) => removeSet(exercise.id, setId)}
           onUpdateSet={(setId, key, value) => updateSet(exercise.id, setId, key, value)}
           onClearDefault={(setId, key) => clearSetDefaultOnFocus(exercise.id, setId, key)}
+          onToggleDropset={(setId) => toggleDropset(exercise.id, setId)}
           onSelectMachine={(machineId) => updateExerciseMachine(exercise.id, machineId, exercise.availableMachines)}
           onDragOver={(e) => e.preventDefault()}
           onDragStart={() => setDraggingExerciseId(exercise.id)}
