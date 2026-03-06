@@ -67,6 +67,7 @@ Suggested fields:
 - `targetRepsMax: number`
 - `targetSets: number`
 - `order: number`
+- `linkedExerciseItemId: string?` (id of the sibling exercise item that acts as an alternative; bidirectional — both items point to each other)
 - `createdAt: timestamp`
 - `updatedAt: timestamp`
 

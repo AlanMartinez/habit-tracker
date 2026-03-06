@@ -32,6 +32,11 @@ type WorkoutExercise = {
   targetRepsMin?: number
   targetRepsMax?: number
   targetSets?: number
+  linkedExerciseItemId?: string
+  linkedExerciseId?: string
+  linkedName?: string
+  linkedAvailableMachines?: Array<{ id: string; label: string }>
+  selectedAlternative: 'A' | 'B'
 }
 
 const toId = (): string =>
@@ -76,6 +81,11 @@ const mapDraftToExercise = (item: WorkoutDraft['exercises'][number]): WorkoutExe
     targetRepsMin: item.targetRepsMin,
     targetRepsMax: item.targetRepsMax,
     targetSets: item.targetSets,
+    linkedExerciseItemId: item.linkedExerciseItemId,
+    linkedExerciseId: item.linkedExerciseId,
+    linkedName: item.linkedNameSnapshot,
+    linkedAvailableMachines: item.linkedAvailableMachines,
+    selectedAlternative: 'A',
     sets: item.sets.length > 0
       ? item.sets.map((set) => ({
           id: set.id,
@@ -215,6 +225,9 @@ type ExerciseCardProps = {
   onDragStart: () => void
   onDragOver: (e: React.DragEvent) => void
   onDrop: () => void
+  onSwitchAlternative?: () => void
+  linkedName?: string
+  selectedAlternative?: 'A' | 'B'
 }
 
 const ExerciseCard = ({
@@ -232,6 +245,9 @@ const ExerciseCard = ({
   onDragStart,
   onDragOver,
   onDrop,
+  onSwitchAlternative,
+  linkedName,
+  selectedAlternative,
 }: ExerciseCardProps) => {
   const activeMachineId = exercise.sets[0]?.machineId
   const targetLabel = formatTarget(exercise)
@@ -267,7 +283,7 @@ const ExerciseCard = ({
           type="button"
         >
           <p className="truncate text-[15px] font-semibold leading-tight text-[var(--text-strong)]">
-            {exercise.name}
+            {selectedAlternative === 'B' && linkedName ? linkedName : exercise.name}
           </p>
           {exercise.collapsed && (
             <p className="mt-0.5 text-[11px] font-medium text-[var(--text-muted)]">
@@ -280,6 +296,36 @@ const ExerciseCard = ({
             </Badge>
           )}
         </button>
+
+        {/* A/B toggle */}
+        {linkedName && (
+          <div className="flex items-center gap-1">
+            <button
+              className={cn(
+                'rounded-full px-3 py-0.5 text-xs font-semibold transition-all duration-150',
+                selectedAlternative === 'A'
+                  ? 'bg-[var(--accent)] text-white'
+                  : 'border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)]',
+              )}
+              onClick={(e) => { e.stopPropagation(); onSwitchAlternative?.(); }}
+              type="button"
+            >
+              A
+            </button>
+            <button
+              className={cn(
+                'rounded-full px-3 py-0.5 text-xs font-semibold transition-all duration-150',
+                selectedAlternative === 'B'
+                  ? 'bg-[var(--accent)] text-white'
+                  : 'border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)]',
+              )}
+              onClick={(e) => { e.stopPropagation(); onSwitchAlternative?.(); }}
+              type="button"
+            >
+              B
+            </button>
+          </div>
+        )}
 
         {/* Chevron */}
         <button
@@ -497,6 +543,16 @@ export const LogWorkoutPage = () => {
     [context, selectedExercise],
   )
 
+  const deduplicatedItems = useMemo(() => {
+    const hiddenIds = new Set<string>()
+    for (const item of items) {
+      if (item.linkedExerciseItemId && !hiddenIds.has(item.id)) {
+        hiddenIds.add(item.linkedExerciseItemId)
+      }
+    }
+    return items.filter((item) => !hiddenIds.has(item.id))
+  }, [items])
+
   const addAdHocExercise = async () => {
     if (!selectedExerciseItem || !user) {
       return
@@ -515,6 +571,7 @@ export const LogWorkoutPage = () => {
         collapsed: false,
         availableMachines,
         sets: [createSet(defaultMachine)],
+        selectedAlternative: 'A' as const,
       },
     ])
   }
@@ -657,6 +714,23 @@ export const LogWorkoutPage = () => {
     )
   }
 
+  const switchAlternative = (exerciseId: string) => {
+    setHasOverrides(true)
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== exerciseId || !item.linkedExerciseItemId) return item
+        const next = item.selectedAlternative === 'A' ? 'B' : 'A'
+        const defaultMachine =
+          next === 'B' ? item.linkedAvailableMachines?.[0] : item.availableMachines[0]
+        return {
+          ...item,
+          selectedAlternative: next,
+          sets: [createSet(defaultMachine)],
+        }
+      }),
+    )
+  }
+
   const onSave = async () => {
     if (!user || !context) return
 
@@ -672,17 +746,20 @@ export const LogWorkoutPage = () => {
         routineDayLabel: context.routineDayLabel,
         isFromActiveRoutine: context.isFromActiveRoutine,
         hasSessionOverrides: hasOverrides,
-        exercises: items.map((item) => ({
-          exerciseId: item.sourceExerciseId,
-          nameSnapshot: item.name,
-          sets: item.sets.map((set) => ({
-            reps: parsePositiveNumber(set.reps, 1),
-            weightKg: parseNonNegativeNumber(set.kg),
-            rpe: parsePositiveNumber(set.rir, 1),
-            machineId: set.machineId,
-            machineLabel: set.machineLabel,
-          })),
-        })),
+        exercises: deduplicatedItems.map((item) => {
+          const useB = item.selectedAlternative === 'B' && item.linkedExerciseId !== undefined
+          return {
+            exerciseId: useB ? item.linkedExerciseId : item.sourceExerciseId,
+            nameSnapshot: useB ? (item.linkedName ?? item.name) : item.name,
+            sets: item.sets.map((set) => ({
+              reps: parsePositiveNumber(set.reps, 1),
+              weightKg: parseNonNegativeNumber(set.kg),
+              rpe: parsePositiveNumber(set.rir, 1),
+              machineId: set.machineId,
+              machineLabel: set.machineLabel,
+            })),
+          }
+        }),
       })
 
       navigate('/app/workout')
@@ -767,7 +844,7 @@ export const LogWorkoutPage = () => {
       )}
 
       {/* ── Empty state ────────────────────────────────────────────────────── */}
-      {items.length === 0 && (
+      {deduplicatedItems.length === 0 && (
         <EmptyState
           action={<Button onClick={() => void addAdHocExercise()}>Add exercise</Button>}
           description="No exercise loaded for this session."
@@ -776,7 +853,7 @@ export const LogWorkoutPage = () => {
       )}
 
       {/* ── Exercise list ──────────────────────────────────────────────────── */}
-      {items.map((exercise, index) => (
+      {deduplicatedItems.map((exercise, index) => (
         <ExerciseCard
           history={
             exercise.sourceExerciseId
@@ -805,6 +882,9 @@ export const LogWorkoutPage = () => {
             setItems((prev) => reorderItems(prev, fromIndex, toIndex))
             setDraggingExerciseId(null)
           }}
+          onSwitchAlternative={() => switchAlternative(exercise.id)}
+          linkedName={exercise.linkedName}
+          selectedAlternative={exercise.selectedAlternative}
         />
       ))}
 

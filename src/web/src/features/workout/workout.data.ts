@@ -31,6 +31,10 @@ export type WorkoutDraftExercise = {
   targetSets?: number
   sets: WorkoutDraftSet[]
   availableMachines: Array<{ id: string; label: string }>
+  linkedExerciseItemId?: string
+  linkedExerciseId?: string
+  linkedNameSnapshot?: string
+  linkedAvailableMachines?: Array<{ id: string; label: string }>
 }
 
 export type WorkoutDraft = {
@@ -205,12 +209,17 @@ export const getTodayWorkoutDraft = async (
   const routineDayExercises = selectedDayId
     ? await routineStore.listDayExercises(uid, routine.id, selectedDayId)
     : []
+  const itemsById = new Map(routineDayExercises.map((item) => [item.id, item]))
   const draftExercises = await Promise.all(
     routineDayExercises.map(async (item) => {
       const targetSets = item.targetSets ?? 1
       const availableMachines = item.exerciseId
         ? (await exerciseMachineStore.list(uid, item.exerciseId)).map((m) => ({ id: m.id, label: m.label }))
         : []
+      const linkedItem = item.linkedExerciseItemId ? itemsById.get(item.linkedExerciseItemId) : undefined
+      const linkedAvailableMachines = linkedItem?.exerciseId
+        ? (await exerciseMachineStore.list(uid, linkedItem.exerciseId)).map((m) => ({ id: m.id, label: m.label }))
+        : undefined
       return {
         id: item.id,
         order: item.order,
@@ -221,6 +230,10 @@ export const getTodayWorkoutDraft = async (
         targetSets,
         sets: Array.from({ length: targetSets }, (_, index) => toDefaultSet(index, item.targetRepsMin)),
         availableMachines,
+        linkedExerciseItemId: item.linkedExerciseItemId,
+        linkedExerciseId: linkedItem?.exerciseId,
+        linkedNameSnapshot: linkedItem?.nameSnapshot,
+        linkedAvailableMachines,
       }
     }),
   )
@@ -257,12 +270,17 @@ export const getRoutineDayTemplateDraft = async (
   }
 
   const dayExercises = await routineStore.listDayExercises(uid, routineId, routineDayId)
+  const dayItemsById = new Map(dayExercises.map((item) => [item.id, item]))
   const exercises = await Promise.all(
     dayExercises.map(async (item) => {
       const targetSets = item.targetSets ?? 1
       const availableMachines = item.exerciseId
         ? (await exerciseMachineStore.list(uid, item.exerciseId)).map((m) => ({ id: m.id, label: m.label }))
         : []
+      const linkedItem = item.linkedExerciseItemId ? dayItemsById.get(item.linkedExerciseItemId) : undefined
+      const linkedAvailableMachines = linkedItem?.exerciseId
+        ? (await exerciseMachineStore.list(uid, linkedItem.exerciseId)).map((m) => ({ id: m.id, label: m.label }))
+        : undefined
       return {
         id: item.id,
         order: item.order,
@@ -273,6 +291,10 @@ export const getRoutineDayTemplateDraft = async (
         targetSets,
         sets: Array.from({ length: targetSets }, (_, index) => toDefaultSet(index, item.targetRepsMin)),
         availableMachines,
+        linkedExerciseItemId: item.linkedExerciseItemId,
+        linkedExerciseId: linkedItem?.exerciseId,
+        linkedNameSnapshot: linkedItem?.nameSnapshot,
+        linkedAvailableMachines,
       }
     }),
   )

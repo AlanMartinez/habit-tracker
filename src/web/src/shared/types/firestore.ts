@@ -75,6 +75,7 @@ export interface RoutineDayExercise {
   targetRepsMax: number;
   targetSets: number;
   order: number;
+  linkedExerciseItemId?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -86,6 +87,7 @@ export interface NewRoutineDayExerciseInput {
   targetRepsMax: number;
   targetSets: number;
   order: number;
+  linkedExerciseItemId?: string;
 }
 
 export interface WorkoutSession {

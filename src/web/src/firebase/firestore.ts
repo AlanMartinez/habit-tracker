@@ -7,6 +7,7 @@ import {
   limit,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -334,8 +335,39 @@ export const routineStore = {
         targetRepsMax: payload.targetRepsMax,
         targetSets: payload.targetSets,
         order: payload.order,
+        linkedExerciseItemId: payload.linkedExerciseItemId ?? null,
       },
     );
+  },
+
+  async linkDayExercises(
+    uid: string,
+    routineId: string,
+    dayId: string,
+    itemIdA: string,
+    itemIdB: string,
+  ): Promise<void> {
+    const refA = doc(db, 'users', uid, 'routines', routineId, 'days', dayId, 'exercises', itemIdA)
+    const refB = doc(db, 'users', uid, 'routines', routineId, 'days', dayId, 'exercises', itemIdB)
+    await runTransaction(db, async (tx) => {
+      tx.update(refA, { linkedExerciseItemId: itemIdB, updatedAt: serverTimestamp() })
+      tx.update(refB, { linkedExerciseItemId: itemIdA, updatedAt: serverTimestamp() })
+    })
+  },
+
+  async unlinkDayExercises(
+    uid: string,
+    routineId: string,
+    dayId: string,
+    itemIdA: string,
+    itemIdB: string,
+  ): Promise<void> {
+    const refA = doc(db, 'users', uid, 'routines', routineId, 'days', dayId, 'exercises', itemIdA)
+    const refB = doc(db, 'users', uid, 'routines', routineId, 'days', dayId, 'exercises', itemIdB)
+    await runTransaction(db, async (tx) => {
+      tx.update(refA, { linkedExerciseItemId: null, updatedAt: serverTimestamp() })
+      tx.update(refB, { linkedExerciseItemId: null, updatedAt: serverTimestamp() })
+    })
   },
 
   async removeDayExercise(

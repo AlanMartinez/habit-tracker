@@ -15,8 +15,10 @@ import {
 import { listExercises } from '../exercises/exercises.data'
 import {
   getRoutineBuilderData,
+  linkExercisesInDay,
   renameRoutineDay,
   replaceDayExercises,
+  unlinkExercisesInDay,
   type RoutineDayWithExercises,
 } from './routines.data'
 
@@ -52,6 +54,7 @@ export const RoutineBuilderPage = () => {
   const [targetRepsMin, setTargetRepsMin] = useState('8')
   const [targetRepsMax, setTargetRepsMax] = useState('12')
   const [targetSets, setTargetSets] = useState('3')
+  const [linkPickerForItemId, setLinkPickerForItemId] = useState<string | null>(null)
 
   const refreshRoutineData = async () => {
     if (!user || !routineId) {
@@ -182,6 +185,7 @@ export const RoutineBuilderPage = () => {
         targetRepsMin: item.targetRepsMin ?? 8,
         targetRepsMax: item.targetRepsMax ?? 12,
         targetSets: item.targetSets ?? 3,
+        linkedExerciseItemId: item.linkedExerciseItemId,
       })),
       {
         itemId: toItemId(),
@@ -195,6 +199,35 @@ export const RoutineBuilderPage = () => {
 
     setAddModalOpen(false)
     setPendingExercise(null)
+  }
+
+  const onLinkExercise = async (itemId: string, targetItemId: string) => {
+    if (!user || !routineId || !selectedDay) return
+    try {
+      setIsSaving(true)
+      setError(null)
+      await linkExercisesInDay(user.uid, routineId, selectedDay.id, itemId, targetItemId)
+      await refreshRoutineData()
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Unable to link exercises.')
+    } finally {
+      setIsSaving(false)
+      setLinkPickerForItemId(null)
+    }
+  }
+
+  const onUnlinkExercise = async (itemId: string, linkedItemId: string) => {
+    if (!user || !routineId || !selectedDay) return
+    try {
+      setIsSaving(true)
+      setError(null)
+      await unlinkExercisesInDay(user.uid, routineId, selectedDay.id, itemId, linkedItemId)
+      await refreshRoutineData()
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Unable to unlink exercises.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   if (!routineId || !user) {
@@ -385,6 +418,7 @@ export const RoutineBuilderPage = () => {
                             targetRepsMin: item.targetRepsMin ?? 8,
                             targetRepsMax: item.targetRepsMax ?? 12,
                             targetSets: item.targetSets ?? 3,
+                            linkedExerciseItemId: item.linkedExerciseItemId,
                           })),
                         )
                         setDraggingExerciseId(null)
@@ -398,29 +432,106 @@ export const RoutineBuilderPage = () => {
                           <p className="text-xs text-[var(--text-muted)]">
                             Target: {exercise.targetRepsMin ?? 8}-{exercise.targetRepsMax ?? 12} reps x {exercise.targetSets ?? 3} sets
                           </p>
+                          {exercise.linkedExerciseItemId && (
+                            <p className="text-xs text-[var(--accent-text)]">
+                              Linked alt: {selectedDay.exercises.find((e) => e.id === exercise.linkedExerciseItemId)?.nameSnapshot ?? '—'}
+                            </p>
+                          )}
                         </div>
-                        <Button
-                          onClick={() =>
-                            void persistDayExercises(
-                              selectedDay.id,
-                              selectedDay.exercises
-                                .filter((item) => item.id !== exercise.id)
-                                .map((item) => ({
-                                  itemId: item.id,
-                                  exerciseId: item.exerciseId,
-                                  nameSnapshot: item.nameSnapshot,
-                                  targetRepsMin: item.targetRepsMin ?? 8,
-                                  targetRepsMax: item.targetRepsMax ?? 12,
-                                  targetSets: item.targetSets ?? 3,
-                                })),
-                            )
-                          }
-                          size="sm"
-                          variant="ghost"
-                        >
-                          Remove
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          {exercise.linkedExerciseItemId ? (
+                            <Button
+                              onClick={() =>
+                                void onUnlinkExercise(exercise.id, exercise.linkedExerciseItemId!)
+                              }
+                              size="sm"
+                              variant="ghost"
+                            >
+                              Unlink
+                            </Button>
+                          ) : (
+                            <Button
+                              onClick={() =>
+                                setLinkPickerForItemId((prev) =>
+                                  prev === exercise.id ? null : exercise.id,
+                                )
+                              }
+                              size="sm"
+                              variant="ghost"
+                            >
+                              Link alt
+                            </Button>
+                          )}
+                          <Button
+                            onClick={async () => {
+                              if (exercise.linkedExerciseItemId) {
+                                await onUnlinkExercise(exercise.id, exercise.linkedExerciseItemId)
+                              }
+                              void persistDayExercises(
+                                selectedDay.id,
+                                selectedDay.exercises
+                                  .filter((item) => item.id !== exercise.id)
+                                  .map((item) => ({
+                                    itemId: item.id,
+                                    exerciseId: item.exerciseId,
+                                    nameSnapshot: item.nameSnapshot,
+                                    targetRepsMin: item.targetRepsMin ?? 8,
+                                    targetRepsMax: item.targetRepsMax ?? 12,
+                                    targetSets: item.targetSets ?? 3,
+                                    linkedExerciseItemId:
+                                      item.linkedExerciseItemId === exercise.id
+                                        ? undefined
+                                        : item.linkedExerciseItemId,
+                                  })),
+                              )
+                            }}
+                            size="sm"
+                            variant="ghost"
+                          >
+                            Remove
+                          </Button>
+                        </div>
                       </div>
+
+                      {linkPickerForItemId === exercise.id && (
+                        <div className="mt-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-3 space-y-2">
+                          <p className="text-xs font-semibold text-[var(--text-muted)]">
+                            Select an exercise to link as alternative:
+                          </p>
+                          {selectedDay.exercises
+                            .filter(
+                              (other) =>
+                                other.id !== exercise.id &&
+                                !other.linkedExerciseItemId,
+                            )
+                            .map((other) => (
+                              <button
+                                className="flex w-full items-center justify-between rounded-lg border border-[var(--border-muted)] bg-[var(--surface-2)] px-3 py-2 text-left text-sm font-medium text-[var(--text-strong)] transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]"
+                                key={other.id}
+                                onClick={() => void onLinkExercise(exercise.id, other.id)}
+                                type="button"
+                              >
+                                {other.nameSnapshot}
+                              </button>
+                            ))}
+                          {selectedDay.exercises.filter(
+                            (other) =>
+                              other.id !== exercise.id &&
+                              !other.linkedExerciseItemId,
+                          ).length === 0 && (
+                            <p className="text-xs text-[var(--text-muted)]">
+                              No available exercises to link.
+                            </p>
+                          )}
+                          <Button
+                            onClick={() => setLinkPickerForItemId(null)}
+                            size="sm"
+                            variant="secondary"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
