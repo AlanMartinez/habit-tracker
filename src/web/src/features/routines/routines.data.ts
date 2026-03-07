@@ -223,6 +223,7 @@ export const replaceDayExercises = async (
     targetRepsMin: number
     targetRepsMax: number
     targetSets: number
+    linkedExerciseItemId?: string
   }>,
 ): Promise<void> => {
   const previous = await routineStore.listDayExercises(uid, routineId, dayId)
@@ -235,6 +236,7 @@ export const replaceDayExercises = async (
     targetRepsMin: item.targetRepsMin,
     targetRepsMax: item.targetRepsMax,
     targetSets: item.targetSets,
+    linkedExerciseItemId: item.linkedExerciseItemId,
   }))
 
   await Promise.all(
@@ -246,6 +248,7 @@ export const replaceDayExercises = async (
         targetRepsMax: item.targetRepsMax,
         targetSets: item.targetSets,
         order: index,
+        linkedExerciseItemId: item.linkedExerciseItemId,
       }),
     ),
   )
@@ -262,4 +265,24 @@ export const replaceDayExercises = async (
     order: currentDay?.order ?? 0,
     exerciseOrder: nextWithIds.map((item) => item.itemId),
   })
+}
+
+export const linkExercisesInDay = async (
+  uid: string,
+  routineId: string,
+  dayId: string,
+  itemIdA: string,
+  itemIdB: string,
+): Promise<void> => {
+  await routineStore.linkDayExercises(uid, routineId, dayId, itemIdA, itemIdB)
+}
+
+export const unlinkExercisesInDay = async (
+  uid: string,
+  routineId: string,
+  dayId: string,
+  itemIdA: string,
+  itemIdB: string,
+): Promise<void> => {
+  await routineStore.unlinkDayExercises(uid, routineId, dayId, itemIdA, itemIdB)
 }
