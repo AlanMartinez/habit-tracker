@@ -762,6 +762,11 @@ export const LogWorkoutPage = () => {
           ...item,
           selectedAlternative: next,
           sets: [createSet(defaultMachine)],
+        }
+      }),
+    )
+  }
+
   const toggleDropset = (exerciseId: string, setId: string) => {
     setHasOverrides(true)
     setItems((prev) =>
@@ -803,21 +808,10 @@ export const LogWorkoutPage = () => {
               rpe: parsePositiveNumber(set.rir, 1),
               machineId: set.machineId,
               machineLabel: set.machineLabel,
+              isDropset: set.isDropset || undefined,
             })),
           }
         }),
-        exercises: items.map((item) => ({
-          exerciseId: item.sourceExerciseId,
-          nameSnapshot: item.name,
-          sets: item.sets.map((set) => ({
-            reps: parsePositiveNumber(set.reps, 1),
-            weightKg: parseNonNegativeNumber(set.kg),
-            rpe: parsePositiveNumber(set.rir, 1),
-            machineId: set.machineId,
-            machineLabel: set.machineLabel,
-            isDropset: set.isDropset || undefined,
-          })),
-        })),
       })
 
       navigate('/app/workout')
