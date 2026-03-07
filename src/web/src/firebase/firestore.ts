@@ -548,6 +548,7 @@ export const workoutStore = {
         rpe: payload.rpe,
         machineId: payload.machineId,
         machineLabel: payload.machineLabel,
+        isDropset: payload.isDropset,
       },
     );
   },
