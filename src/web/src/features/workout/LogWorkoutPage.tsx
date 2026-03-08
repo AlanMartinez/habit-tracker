@@ -736,7 +736,7 @@ export const LogWorkoutPage = () => {
     const { sourceExerciseId } = exercise
     setExerciseHistories((prev) => ({ ...prev, [sourceExerciseId]: 'loading' }))
 
-    void getExerciseHistoryForWorkout(user!.uid, sourceExerciseId, context!.dateKey)
+    void getExerciseHistoryForWorkout(user!.uid, sourceExerciseId, context!.dateKey, context!.routineDayLabel)
       .then((history) => {
         setExerciseHistories((prev) => ({ ...prev, [sourceExerciseId]: history }))
       })
