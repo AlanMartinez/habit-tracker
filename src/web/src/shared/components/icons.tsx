@@ -63,3 +63,16 @@ export const IconChart = (props: IconProps) => (
     <path d="M4 20V8M10 20V4M16 20v-7M22 20V11" />
   </svg>
 )
+
+export const IconClipboard = (props: IconProps) => (
+  <svg aria-hidden="true" {...baseProps} {...props}>
+    <rect height="14" rx="2" ry="2" width="14" x="5" y="5" />
+    <path d="M10 5V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2" />
+  </svg>
+)
+
+export const IconCheck = (props: IconProps) => (
+  <svg aria-hidden="true" {...baseProps} {...props}>
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+)

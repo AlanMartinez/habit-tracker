@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../app/providers/useAuth'
 import { Alert, AppShell, Button, Card, Drawer, EmptyState, Skeleton } from '../../shared/components'
+import { IconCheck, IconClipboard } from '../../shared/components/icons'
 import {
   getWorkoutSessionDetail,
   listWorkoutsForMonth,
@@ -43,6 +44,28 @@ const buildMonthCells = (month: Date) => {
   })
 }
 
+const formatSet = (set: {
+  reps: number
+  weightKg: number
+  rpe?: number
+  machineLabel?: string
+  isDropset?: boolean
+}): string => {
+  const rirSuffix = set.rpe === undefined ? '' : ` RIR ${set.rpe}`
+  const machineSuffix = set.machineLabel ? ` [${set.machineLabel}]` : ''
+  const dropsetSuffix = set.isDropset ? ' ↓DS' : ''
+  return `${set.reps} x ${set.weightKg}kg${rirSuffix}${machineSuffix}${dropsetSuffix}`
+}
+
+const buildClipboardText = (session: WorkoutSessionDetail): string => {
+  const header = `Workout - ${dateLabel(session.date)}`
+  const exerciseBlocks = session.exercises.map((exercise) => {
+    const setsText = exercise.sets.map((set) => `  - ${formatSet(set)}`).join('\n')
+    return `${exercise.nameSnapshot}\n${setsText}`
+  })
+  return [header, '', ...exerciseBlocks].join('\n\n')
+}
+
 export const HistoryPage = () => {
   const { user } = useAuth()
   const [month, setMonth] = useState(() => startOfMonth(new Date()))
@@ -52,6 +75,22 @@ export const HistoryPage = () => {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
   const [selectedSession, setSelectedSession] = useState<WorkoutSessionDetail | null>(null)
   const [isDetailLoading, setIsDetailLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    if (!selectedSession) return
+    const text = buildClipboardText(selectedSession)
+    try {
+      if (!navigator.clipboard) {
+        throw new Error('Clipboard not available on this browser.')
+      }
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (copyError) {
+      setError(copyError instanceof Error ? copyError.message : 'Unable to copy to clipboard.')
+    }
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -181,6 +220,7 @@ export const HistoryPage = () => {
         onClose={() => {
           setSelectedSessionId(null)
           setSelectedSession(null)
+          setCopied(false)
         }}
         open={Boolean(selectedSessionId)}
         title={drawerTitle}
@@ -189,21 +229,30 @@ export const HistoryPage = () => {
 
         {!isDetailLoading && selectedSession && (
           <div className="space-y-3">
-            <p className="text-sm text-[var(--text)]">
-              {selectedSession.routineDayLabel || 'Routine day'}
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-[var(--text)]">
+                {selectedSession.routineDayLabel || 'Routine day'}
+              </p>
+              <Button
+                leadingIcon={
+                  copied ? (
+                    <IconCheck className="h-4 w-4" />
+                  ) : (
+                    <IconClipboard className="h-4 w-4" />
+                  )
+                }
+                onClick={() => void handleCopy()}
+                size="sm"
+                variant="ghost"
+              >
+                {copied ? 'Copiado' : 'Copiar'}
+              </Button>
+            </div>
             {selectedSession.exercises.map((exercise) => (
               <div className="rounded-lg border border-[var(--border)] p-3" key={exercise.id}>
                 <p className="text-sm font-semibold text-[var(--text-strong)]">{exercise.nameSnapshot}</p>
                 <p className="text-xs text-[var(--text-muted)]">
-                  {exercise.sets
-                    .map((set) => {
-                      const rirSuffix = set.rpe === undefined ? '' : ` RIR ${set.rpe}`
-                      const machineSuffix = set.machineLabel ? ` [${set.machineLabel}]` : ''
-                      const dropsetSuffix = set.isDropset ? ' ↓DS' : ''
-                      return `${set.reps} x ${set.weightKg}kg${rirSuffix}${machineSuffix}${dropsetSuffix}`
-                    })
-                    .join(', ')}
+                  {exercise.sets.map((set) => formatSet(set)).join(', ')}
                 </p>
               </div>
             ))}
