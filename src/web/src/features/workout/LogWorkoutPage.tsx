@@ -731,18 +731,32 @@ export const LogWorkoutPage = () => {
 
     const isExpanding = exercise.collapsed
     if (!isExpanding || !exercise.sourceExerciseId) return
-    if (exerciseHistories[exercise.sourceExerciseId] !== undefined) return
 
-    const { sourceExerciseId } = exercise
-    setExerciseHistories((prev) => ({ ...prev, [sourceExerciseId]: 'loading' }))
+    // Cargar history del ejercicio A (comportamiento original)
+    if (exerciseHistories[exercise.sourceExerciseId] === undefined) {
+      const { sourceExerciseId } = exercise
+      setExerciseHistories((prev) => ({ ...prev, [sourceExerciseId]: 'loading' }))
+      void getExerciseHistoryForWorkout(user!.uid, sourceExerciseId, context!.dateKey)
+        .then((history) => {
+          setExerciseHistories((prev) => ({ ...prev, [sourceExerciseId]: history }))
+        })
+        .catch(() => {
+          setExerciseHistories((prev) => ({ ...prev, [sourceExerciseId]: null }))
+        })
+    }
 
-    void getExerciseHistoryForWorkout(user!.uid, sourceExerciseId, context!.dateKey)
-      .then((history) => {
-        setExerciseHistories((prev) => ({ ...prev, [sourceExerciseId]: history }))
-      })
-      .catch(() => {
-        setExerciseHistories((prev) => ({ ...prev, [sourceExerciseId]: null }))
-      })
+    // Cargar history del ejercicio B en paralelo (nuevo)
+    if (exercise.linkedExerciseId && exerciseHistories[exercise.linkedExerciseId] === undefined) {
+      const { linkedExerciseId } = exercise
+      setExerciseHistories((prev) => ({ ...prev, [linkedExerciseId]: 'loading' }))
+      void getExerciseHistoryForWorkout(user!.uid, linkedExerciseId, context!.dateKey)
+        .then((history) => {
+          setExerciseHistories((prev) => ({ ...prev, [linkedExerciseId]: history }))
+        })
+        .catch(() => {
+          setExerciseHistories((prev) => ({ ...prev, [linkedExerciseId]: null }))
+        })
+    }
   }
 
   const removeSet = (exerciseId: string, setId: string) => {
@@ -925,41 +939,48 @@ export const LogWorkoutPage = () => {
       )}
 
       {/* ── Exercise list ──────────────────────────────────────────────────── */}
-      {deduplicatedItems.map((exercise, index) => (
-        <ExerciseCard
-          history={
-            exercise.sourceExerciseId
-              ? exerciseHistories[exercise.sourceExerciseId]
-              : undefined
-          }
-          index={index}
-          isDragging={draggingExerciseId === exercise.id}
-          key={exercise.id}
-          exercise={exercise}
-          onExpand={() => onExpandExercise(exercise)}
-          onRemove={() => removeExercise(exercise.id)}
-          onAddSet={() => addSet(exercise.id)}
-          onRemoveSet={(setId) => removeSet(exercise.id, setId)}
-          onUpdateSet={(setId, key, value) => updateSet(exercise.id, setId, key, value)}
-          onClearDefault={(setId, key) => clearSetDefaultOnFocus(exercise.id, setId, key)}
-          onToggleDropset={(setId) => toggleDropset(exercise.id, setId)}
-          onSelectMachine={(machineId) => updateExerciseMachine(exercise.id, machineId, exercise.availableMachines)}
-          onDragOver={(e) => e.preventDefault()}
-          onDragStart={() => setDraggingExerciseId(exercise.id)}
-          onDrop={() => {
-            if (!draggingExerciseId || draggingExerciseId === exercise.id) return
-            const fromIndex = items.findIndex((item) => item.id === draggingExerciseId)
-            const toIndex = items.findIndex((item) => item.id === exercise.id)
-            if (fromIndex < 0 || toIndex < 0) return
-            setHasOverrides(true)
-            setItems((prev) => reorderItems(prev, fromIndex, toIndex))
-            setDraggingExerciseId(null)
-          }}
-          onSwitchAlternative={() => switchAlternative(exercise.id)}
-          linkedName={exercise.linkedName}
-          selectedAlternative={exercise.selectedAlternative}
-        />
-      ))}
+      {deduplicatedItems.map((exercise, index) => {
+        const activeHistoryId =
+          exercise.selectedAlternative === 'B' && exercise.linkedExerciseId
+            ? exercise.linkedExerciseId
+            : exercise.sourceExerciseId
+
+        return (
+          <ExerciseCard
+            history={
+              activeHistoryId
+                ? exerciseHistories[activeHistoryId]
+                : undefined
+            }
+            index={index}
+            isDragging={draggingExerciseId === exercise.id}
+            key={exercise.id}
+            exercise={exercise}
+            onExpand={() => onExpandExercise(exercise)}
+            onRemove={() => removeExercise(exercise.id)}
+            onAddSet={() => addSet(exercise.id)}
+            onRemoveSet={(setId) => removeSet(exercise.id, setId)}
+            onUpdateSet={(setId, key, value) => updateSet(exercise.id, setId, key, value)}
+            onClearDefault={(setId, key) => clearSetDefaultOnFocus(exercise.id, setId, key)}
+            onToggleDropset={(setId) => toggleDropset(exercise.id, setId)}
+            onSelectMachine={(machineId) => updateExerciseMachine(exercise.id, machineId, exercise.availableMachines)}
+            onDragOver={(e) => e.preventDefault()}
+            onDragStart={() => setDraggingExerciseId(exercise.id)}
+            onDrop={() => {
+              if (!draggingExerciseId || draggingExerciseId === exercise.id) return
+              const fromIndex = items.findIndex((item) => item.id === draggingExerciseId)
+              const toIndex = items.findIndex((item) => item.id === exercise.id)
+              if (fromIndex < 0 || toIndex < 0) return
+              setHasOverrides(true)
+              setItems((prev) => reorderItems(prev, fromIndex, toIndex))
+              setDraggingExerciseId(null)
+            }}
+            onSwitchAlternative={() => switchAlternative(exercise.id)}
+            linkedName={exercise.linkedName}
+            selectedAlternative={exercise.selectedAlternative}
+          />
+        )
+      })}
 
       {/* ── Save / Finish button ───────────────────────────────────────────── */}
       <div className="sticky bottom-20 z-10 pt-2">
