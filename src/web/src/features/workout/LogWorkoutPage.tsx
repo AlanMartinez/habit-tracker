@@ -418,11 +418,10 @@ const ExerciseCard = ({
           )}
 
           {/* Set grid header */}
-          <div className="grid grid-cols-[2rem_1fr_1fr_1fr_2rem_2.5rem] items-center gap-1.5 px-0.5">
+          <div className="grid grid-cols-[2rem_1fr_1fr_2rem_2.5rem] items-center gap-1.5 px-0.5">
             <span className="text-center text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">#</span>
             <span className="text-center text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Reps</span>
             <span className="text-center text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">kg</span>
-            <span className="text-center text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">RIR</span>
             <span className="text-center text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">DS</span>
             <span />
           </div>
@@ -430,7 +429,7 @@ const ExerciseCard = ({
           {/* Set rows */}
           <div className="space-y-1.5">
             {exercise.sets.map((set, setIndex) => (
-              <div className="grid grid-cols-[2rem_1fr_1fr_1fr_2rem_2.5rem] items-center gap-1.5" key={set.id}>
+              <div className="grid grid-cols-[2rem_1fr_1fr_2rem_2.5rem] items-center gap-1.5" key={set.id}>
                 {/* Set number */}
                 <div className="flex h-11 items-center justify-center rounded-xl bg-[var(--surface-2)] text-[11px] font-bold tabular-nums text-[var(--text-muted)]">
                   {setIndex + 1}
@@ -451,14 +450,6 @@ const ExerciseCard = ({
                   onChange={(v) => onUpdateSet(set.id, 'kg', v)}
                   onFocus={() => onClearDefault(set.id, 'kg')}
                   value={set.kg}
-                />
-
-                {/* RIR */}
-                <NumInput
-                  label={`Set ${setIndex + 1} RIR for ${exercise.name}`}
-                  onChange={(v) => onUpdateSet(set.id, 'rir', v)}
-                  onFocus={() => onClearDefault(set.id, 'rir')}
-                  value={set.rir}
                 />
 
                 {/* Dropset toggle */}
