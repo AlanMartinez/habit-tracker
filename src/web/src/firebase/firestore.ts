@@ -568,7 +568,7 @@ export const workoutStore = {
     uid: string,
     exerciseId: string,
     excludeDate: DateIso,
-    options?: { maxSessions?: number },
+    options?: { maxSessions?: number; routineDayLabel?: string },
   ): Promise<ExerciseHistory | null> {
     const maxSessions = options?.maxSessions ?? 10;
     const sessionsSnapshot = await getDocs(
@@ -585,6 +585,8 @@ export const workoutStore = {
     let maxWeightKg = 0;
     let lastSessionSets: Array<{ reps: number; weightKg: number }> | null = null;
     let lastSessionDate: DateIso | null = null;
+    let sameDayLastSets: Array<{ reps: number; weightKg: number }> | null = null;
+    let sameDayLastDate: DateIso | null = null;
     let sessionCount = 0;
 
     for (const sessionDoc of sessionsSnapshot.docs) {
@@ -599,6 +601,10 @@ export const workoutStore = {
 
       sessionCount += 1;
       const sessionDate = sessionDoc.data()['date'] as DateIso;
+      const sessionDayLabel = sessionDoc.data()['routineDayLabel'] as string | undefined;
+      const isSameDay =
+        options?.routineDayLabel !== undefined &&
+        sessionDayLabel === options.routineDayLabel;
 
       for (const exerciseDoc of exercisesSnapshot.docs) {
         const setsSnapshot = await getDocs(
@@ -611,6 +617,11 @@ export const workoutStore = {
         const sessionMax = Math.max(...sets.map((s) => s.weightKg));
         if (sessionMax > maxWeightKg) maxWeightKg = sessionMax;
 
+        if (isSameDay && sameDayLastDate === null) {
+          sameDayLastDate = sessionDate;
+          sameDayLastSets = sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg }));
+        }
+
         if (lastSessionDate === null) {
           lastSessionDate = sessionDate;
           lastSessionSets = sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg }));
@@ -618,8 +629,11 @@ export const workoutStore = {
       }
     }
 
-    if (lastSessionDate === null) return null;
+    const resolvedDate = sameDayLastDate ?? lastSessionDate;
+    const resolvedSets = sameDayLastSets ?? lastSessionSets;
 
-    return { maxWeightKg, lastSessionSets: lastSessionSets ?? [], lastSessionDate, sessionCount };
+    if (resolvedDate === null) return null;
+
+    return { maxWeightKg, lastSessionSets: resolvedSets ?? [], lastSessionDate: resolvedDate, sessionCount };
   },
 };

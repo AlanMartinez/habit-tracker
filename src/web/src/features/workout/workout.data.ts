@@ -422,6 +422,7 @@ export const getExerciseHistoryForWorkout = async (
   uid: string,
   exerciseId: string,
   todayDateKey: DateIso,
+  routineDayLabel?: string,
 ): Promise<ExerciseHistory | null> => {
-  return workoutStore.getExerciseHistory(uid, exerciseId, todayDateKey, { maxSessions: 10 })
+  return workoutStore.getExerciseHistory(uid, exerciseId, todayDateKey, { maxSessions: 10, routineDayLabel })
 }
