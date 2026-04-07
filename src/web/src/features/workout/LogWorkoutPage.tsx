@@ -403,17 +403,23 @@ const ExerciseCard = ({
               {history === 'loading' && (
                 <div className="h-7 animate-pulse rounded-xl bg-[var(--surface-2)]" />
               )}
-              {history && history !== 'loading' && history.lastSessionSets.length > 0 && (
-                <div className="flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-3 py-2">
-                  <IconHistory />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
-                    Última
-                  </span>
-                  <span className="text-xs font-semibold text-[var(--text-strong)]">
-                    {history.lastSessionSets.map((s) => `${s.reps}×${s.weightKg}kg`).join(' / ')}
-                  </span>
-                </div>
-              )}
+              {history && history !== 'loading' && history.lastSessionSets.length > 0 && (() => {
+                const visibleHistorySets =
+                  activeMachineId && history.lastSessionSets.some((s) => s.machineId === activeMachineId)
+                    ? history.lastSessionSets.filter((s) => s.machineId === activeMachineId)
+                    : history.lastSessionSets
+                return visibleHistorySets.length > 0 ? (
+                  <div className="flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-3 py-2">
+                    <IconHistory />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+                      Última
+                    </span>
+                    <span className="text-xs font-semibold text-[var(--text-strong)]">
+                      {visibleHistorySets.map((s) => `${s.reps}×${s.weightKg}kg`).join(' / ')}
+                    </span>
+                  </div>
+                ) : null
+              })()}
             </>
           )}
 

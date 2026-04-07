@@ -613,7 +613,7 @@ export const workoutStore = {
 
         if (lastSessionDate === null) {
           lastSessionDate = sessionDate;
-          lastSessionSets = sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg }));
+          lastSessionSets = sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg, machineId: s.machineId }));
         }
       }
     }
