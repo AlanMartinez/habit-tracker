@@ -23,6 +23,21 @@ const dateLabel = (dateKey: string): string => {
   }).format(new Date(year, (month ?? 1) - 1, day ?? 1))
 }
 
+const buildWorkoutText = (session: WorkoutSessionDetail): string => {
+  const header = `${dateLabel(session.date)} — ${session.routineDayLabel ?? 'Workout'}`
+  const exerciseLines = session.exercises.map((exercise) => {
+    const setsText = exercise.sets
+      .map((set) => {
+        const machineSuffix = set.machineLabel ? ` [${set.machineLabel}]` : ''
+        const dropsetSuffix = set.isDropset ? ' DS' : ''
+        return `  ${set.reps} x ${set.weightKg}kg${machineSuffix}${dropsetSuffix}`
+      })
+      .join('\n')
+    return `${exercise.nameSnapshot}\n${setsText}`
+  })
+  return `${header}\n\n${exerciseLines.join('\n\n')}`
+}
+
 const buildMonthCells = (month: Date) => {
   const firstDay = startOfMonth(month)
   const offset = (firstDay.getDay() + 6) % 7
@@ -52,6 +67,7 @@ export const HistoryPage = () => {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
   const [selectedSession, setSelectedSession] = useState<WorkoutSessionDetail | null>(null)
   const [isDetailLoading, setIsDetailLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -101,6 +117,17 @@ export const HistoryPage = () => {
 
     void loadDetail()
   }, [user, selectedSessionId])
+
+  const handleCopy = async () => {
+    if (!selectedSession) return
+    try {
+      await navigator.clipboard.writeText(buildWorkoutText(selectedSession))
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setError('No se pudo copiar al portapapeles.')
+    }
+  }
 
   const monthCells = useMemo(() => buildMonthCells(month), [month])
 
@@ -189,9 +216,14 @@ export const HistoryPage = () => {
 
         {!isDetailLoading && selectedSession && (
           <div className="space-y-3">
-            <p className="text-sm text-[var(--text)]">
-              {selectedSession.routineDayLabel || 'Routine day'}
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-[var(--text)]">
+                {selectedSession.routineDayLabel || 'Routine day'}
+              </p>
+              <Button onClick={handleCopy} size="sm" variant="secondary">
+                {copied ? '¡Copiado!' : 'Copy'}
+              </Button>
+            </div>
             {selectedSession.exercises.map((exercise) => (
               <div className="rounded-lg border border-[var(--border)] p-3" key={exercise.id}>
                 <p className="text-sm font-semibold text-[var(--text-strong)]">{exercise.nameSnapshot}</p>
